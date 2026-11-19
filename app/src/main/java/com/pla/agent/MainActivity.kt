@@ -17,8 +17,7 @@ class MainActivity : AppCompatActivity() {
 
         // Tombol Mulai Percakapan
         binding.btnChat.setOnClickListener {
-            // Nanti kita arahkan ke ChatActivity
-            Toast.makeText(this, "Membuka layar percakapan...", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, ChatActivity::class.java))
         }
 
         // Tombol Riwayat
@@ -28,7 +27,7 @@ class MainActivity : AppCompatActivity() {
 
         // Tombol Pengaturan
         binding.btnSettings.setOnClickListener {
-            Toast.makeText(this, "Membuka pengaturan...", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, SettingsActivity::class.java))
         }
     }
 }
