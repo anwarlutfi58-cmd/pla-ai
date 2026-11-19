@@ -15,7 +15,6 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySettingsBinding
     private lateinit var preferences: AppPreferences
 
-    // Daftar gambar avatar yang tersedia
     private val avatarList = listOf(
         R.drawable.avatar_umum,
         R.drawable.avatar_coding,
@@ -36,7 +35,6 @@ class SettingsActivity : AppCompatActivity() {
         val adapterAvatar = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, avatarNames)
         binding.spinnerAvatar.adapter = adapterAvatar
         
-        // Set spinner ke avatar yang sedang aktif
         val currentAvatar = preferences.getAiAvatar()
         val avatarIndex = avatarList.indexOf(currentAvatar)
         if (avatarIndex != -1) {
@@ -56,8 +54,14 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        // Muat Status Switch Internet
         binding.switchInternet.isChecked = preferences.isInternetEnabled()
+
+        // BUKA PENGATURAN AKSESIBILITAS
+        binding.btnIzinAksesibilitas.setOnClickListener {
+            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+            startActivity(intent)
+            Toast.makeText(this, "Cari 'PLA Agent' dan aktifkan izinnya.", Toast.LENGTH_LONG).show()
+        }
 
         binding.btnManageModels.setOnClickListener {
             startActivity(Intent(this, ModelDownloadActivity::class.java))
