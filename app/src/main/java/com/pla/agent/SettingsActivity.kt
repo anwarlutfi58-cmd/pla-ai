@@ -58,7 +58,6 @@ class SettingsActivity : AppCompatActivity() {
         binding.switchInternet.isChecked = preferences.isInternetEnabled()
         binding.switchTts.isChecked = preferences.isTtsEnabled()
 
-        // BUKA PENGATURAN AKSESIBILITAS
         binding.btnIzinAksesibilitas.setOnClickListener {
             val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
             startActivity(intent)
@@ -81,16 +80,30 @@ class SettingsActivity : AppCompatActivity() {
             finish()
         }
 
+        // MENYALAKAN JARVIS (BACKGROUND SERVICE)
         binding.btnStartJarvis.setOnClickListener {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
                 val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
                 startActivity(intent)
                 Toast.makeText(this, "Izinkan aplikasi ini untuk muncul di atas aplikasi lain", Toast.LENGTH_LONG).show()
             } else {
-                startService(Intent(this, FloatingService::class.java))
-                Toast.makeText(this, "Jarvis (Melayang) Diaktifkan!", Toast.LENGTH_SHORT).show()
+                // Jalankan Foreground Service
+                val serviceIntent = Intent(this, JarvisBackgroundService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(serviceIntent)
+                } else {
+                    startService(serviceIntent)
+                }
+                Toast.makeText(this, "Jarvis Aktif di Latar Belakang!", Toast.LENGTH_SHORT).show()
                 finish() 
             }
+        }
+
+        // MEMATIKAN JARVIS
+        binding.btnStopJarvis.setOnClickListener {
+            stopService(Intent(this, JarvisBackgroundService::class.java))
+            stopService(Intent(this, FloatingService::class.java))
+            Toast.makeText(this, "Jarvis Dimatikan.", Toast.LENGTH_SHORT).show()
         }
 
         binding.switchInternet.setOnCheckedChangeListener { _, isChecked ->
