@@ -1,116 +1,85 @@
 package com.pla.agent
 
 import android.content.Context
-import android.os.Environment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
 
 class PlAiEngine(
     private val context: Context,
     private val appDao: AppDao
 ) {
-    private var isModelLoaded = false
-    private var currentModelName = ""
+    private val analyzer = LanguageAnalyzer()
     private val githubScraper = GitHubScraper()
     private val preferences = AppPreferences(context)
 
-    fun getAvailableModels(): List<File> {
-        val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-        return downloadDir?.listFiles { file -> file.extension == "gguf" }?.toList() ?: emptyList()
-    }
-
-    fun unloadModel() {
-        isModelLoaded = false
-        currentModelName = ""
-    }
-
-    suspend fun loadModel(modelFile: File, onProgress: (String) -> Unit): Boolean = withContext(Dispatchers.IO) {
-        unloadModel()
-        onProgress("Memuat ${modelFile.name}...")
-        try {
-            Thread.sleep(1500)
-            isModelLoaded = true
-            currentModelName = modelFile.name
-            onProgress("Model siap: ${modelFile.name}")
-            return@withContext true
-        } catch (e: Exception) {
-            onProgress("Gagal memuat: ${e.message}")
-            return@withContext false
-        }
-    }
+    // AI selalu dianggap siap karena tidak butuh model eksternal
+    fun isLoaded(): Boolean = true 
+    fun unloadModel() {} // Dikosongkan karena tidak ada model
 
     suspend fun generateResponse(
         userInput: String, 
         onStatusUpdate: (String) -> Unit,
         onToken: (String) -> Unit
     ) = withContext(Dispatchers.IO) {
-        if (!isModelLoaded) {
-            onToken("Error: Model belum dimuat.")
+        
+        val activeTopic = appDao.getActiveTopic()?.name ?: "Umum"
+        val aiName = preferences.getAiName()
+        
+        onStatusUpdate("Menganalisis bahasa...")
+        
+        // 1. Pecah pertanyaan user menjadi kata kunci
+        val inputTokens = analyzer.tokenize(userInput)
+        
+        if (inputTokens.isEmpty()) {
+            onToken("Halo! Ada yang bisa saya bantu?")
             return@withContext
         }
 
-        val activeTopic = appDao.getActiveTopic()?.name ?: "Umum"
+        // 2. Ambil semua ingatan dari Database
         val memories = appDao.getMemoriesByTopic(activeTopic)
         
-        val recentChats = appDao.getRecentChats().reversed()
-        val chatContext = if (recentChats.isNotEmpty()) {
-            recentChats.joinToString("\n") { "${it.sender}: ${it.message}" }
+        var bestMatchContent = ""
+        var highestScore = 0
+
+        // 3. Cari ingatan yang paling cocok
+        for (memory in memories) {
+            val score = analyzer.hitungSkorKecocokan(inputTokens, memory.content)
+            if (score > highestScore) {
+                highestScore = score
+                bestMatchContent = memory.content
+            }
+        }
+
+        // 4. Susun Jawaban
+        var finalResponse = ""
+
+        if (highestScore > 0) {
+            // Jika ada kecocokan di database
+            // Ambil teks aslinya (jika formatnya JSON, kita bersihkan sedikit)
+            finalResponse = bestMatchContent
+                .replace("{", "").replace("}", "")
+                .replace("\"", "").replace("id:", "")
+                .replace("topik:", "").replace("kategori:", "")
+                .replace("isi:", "")
+                .trim()
+            
+            onStatusUpdate("Ingatan ditemukan!")
         } else {
-            "Belum ada riwayat percakapan."
+            // Jika tidak ada di database, coba cari di GitHub (jika topik Coding)
+            if (activeTopic.contains("Coding", ignoreCase = true) && preferences.isInternetEnabled()) {
+                onStatusUpdate("Mencari referensi di GitHub...")
+                val githubRef = githubScraper.cariReferensi(userInput)
+                finalResponse = "Saya belum mempelajari hal itu secara spesifik. Namun, ini referensi dari GitHub:\n\n$githubRef"
+            } else {
+                finalResponse = "Maaf, saya belum mempelajari topik ini. Tolong tambahkan pengetahuannya di menu Pengaturan."
+            }
         }
 
-        var githubContext = ""
-        val isCodingQuery = activeTopic.contains("Coding", ignoreCase = true) || 
-                            userInput.contains("kode", ignoreCase = true) || 
-                            userInput.contains("coding", ignoreCase = true) ||
-                            userInput.contains("github", ignoreCase = true)
-
-        if (isCodingQuery) {
-            onStatusUpdate("Mencari referensi di GitHub...")
-            githubContext = githubScraper.cariReferensi(userInput)
-        }
-
-        val memoryContext = memories.joinToString("\n") { "Dokumen: ${it.content.take(500)}" }
-        
-        // MENGAMBIL NAMA AI DARI PREFERENSI
-        val aiName = preferences.getAiName()
-
-        val systemPrompt = """
-            Anda adalah $aiName, asisten AI profesional.
-            Topik saat ini: $activeTopic.
-            
-            Riwayat Percakapan Terakhir (Gunakan ini untuk memahami gaya bicara dan keinginan pengguna):
-            $chatContext
-            
-            Referensi Memori (ZIP/Dokumen):
-            $memoryContext
-            
-            Referensi GitHub (Real-time):
-            $githubContext
-            
-            Jawablah dengan cerdas dan sesuaikan dengan kebiasaan pengguna.
-        """.trimIndent()
-
-        try {
-            var mockResponse = "Halo! Saya $aiName (Model: $currentModelName, Topik: $activeTopic).\n"
-            
-            if (recentChats.isNotEmpty()) {
-                mockResponse += "Saya sudah mempelajari riwayat obrolan kita sebelumnya.\n"
-            }
-
-            if (githubContext.isNotEmpty()) {
-                mockResponse += "\nReferensi GitHub:\n$githubContext"
-            }
-
-            for (char in mockResponse) {
-                onToken(char.toString())
-                Thread.sleep(30)
-            }
-        } catch (e: Exception) {
-            onToken("\n[Error: ${e.message}]")
+        // 5. Ketik jawaban huruf per huruf (Simulasi)
+        val completeResponse = "$aiName: $finalResponse"
+        for (char in completeResponse) {
+            onToken(char.toString())
+            Thread.sleep(20) // Efek mengetik
         }
     }
-
-    fun isLoaded(): Boolean = isModelLoaded
 }
