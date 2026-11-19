@@ -77,7 +77,7 @@
             android:background="#333333"
             android:layout_marginBottom="24dp" />
 
-        <!-- FITUR JARVIS (Aksesibilitas) -->
+        <!-- FITUR JARVIS (Aksesibilitas & Background) -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnIzinAksesibilitas"
             android:layout_width="match_parent"
@@ -93,6 +93,15 @@
             android:layout_height="50dp"
             android:text="2. Aktifkan Jarvis (AI Melayang)"
             android:backgroundTint="#4CAF50"
+            app:cornerRadius="12dp"
+            android:layout_marginBottom="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnStopJarvis"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="Matikan Jarvis"
+            android:backgroundTint="#F44336"
             app:cornerRadius="12dp"
             android:layout_marginBottom="24dp" />
 
