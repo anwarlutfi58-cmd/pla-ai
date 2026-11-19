@@ -8,12 +8,16 @@ import android.provider.Settings
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.pla.agent.databinding.ActivitySettingsBinding
+import kotlinx.coroutines.launch
 
 class SettingsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySettingsBinding
     private lateinit var preferences: AppPreferences
+    private lateinit var database: AppDatabase
+    private lateinit var dataImporter: DataImporter
 
     private val avatarList = listOf(
         R.drawable.avatar_umum,
@@ -23,10 +27,20 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Pengaman: Cek apakah AppContainer siap sebelum mengaksesnya
+        val app = application as? AppContainer
+        if (app == null) {
+            Toast.makeText(this, "Gagal memuat konfigurasi aplikasi.", Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
+
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        preferences = (application as AppContainer).preferences
+        preferences = app.preferences
+        database = app.database
+        dataImporter = DataImporter(database)
 
         // Muat Pengaturan Karakter
         binding.edtAiName.setText(preferences.getAiName())
@@ -51,6 +65,27 @@ class SettingsActivity : AppCompatActivity() {
                 Toast.makeText(this, "Karakter berhasil diperbarui!", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(this, "Nama AI tidak boleh kosong", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // LOGIKA SINKRONISASI GITHUB (INI YANG MENGHUBUNGKAN LINK KAMU)
+        binding.btnSyncKnowledge.setOnClickListener {
+            val url = binding.edtGithubRawUrl.text.toString().trim()
+            if (url.isEmpty() || !url.endsWith(".json")) {
+                Toast.makeText(this, "Masukkan link Raw GitHub berakhiran .json", Toast.LENGTH_SHORT).show()
+            } else {
+                binding.btnSyncKnowledge.isEnabled = false
+                binding.tvSyncStatus.text = "Memulai sinkronisasi..."
+                
+                lifecycleScope.launch {
+                    val currentTopic = database.appDao().getActiveTopic()?.name ?: "Umum"
+                    dataImporter.importFromGitHub(url, currentTopic) { status ->
+                        runOnUiThread {
+                            binding.tvSyncStatus.text = status
+                        }
+                    }
+                    binding.btnSyncKnowledge.isEnabled = true
+                }
             }
         }
 
@@ -80,14 +115,12 @@ class SettingsActivity : AppCompatActivity() {
             finish()
         }
 
-        // MENYALAKAN JARVIS (BACKGROUND SERVICE)
         binding.btnStartJarvis.setOnClickListener {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
                 val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
                 startActivity(intent)
                 Toast.makeText(this, "Izinkan aplikasi ini untuk muncul di atas aplikasi lain", Toast.LENGTH_LONG).show()
             } else {
-                // Jalankan Foreground Service
                 val serviceIntent = Intent(this, JarvisBackgroundService::class.java)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     startForegroundService(serviceIntent)
@@ -99,7 +132,6 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        // MEMATIKAN JARVIS
         binding.btnStopJarvis.setOnClickListener {
             stopService(Intent(this, JarvisBackgroundService::class.java))
             stopService(Intent(this, FloatingService::class.java))
