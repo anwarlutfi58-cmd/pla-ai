@@ -2,7 +2,6 @@ package com.pla.agent
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.pla.agent.databinding.ActivityMainBinding
 
@@ -15,17 +14,15 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Tombol Mulai Percakapan
         binding.btnChat.setOnClickListener {
             startActivity(Intent(this, ChatActivity::class.java))
         }
 
-        // Tombol Riwayat
+        // Membuka Layar Riwayat
         binding.btnHistory.setOnClickListener {
-            Toast.makeText(this, "Fitur riwayat akan segera hadir", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, HistoryActivity::class.java))
         }
 
-        // Tombol Pengaturan
         binding.btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
