@@ -18,7 +18,7 @@
         android:id="@+id/edtJarvisCommand"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Contoh: Buat status 'Halo Dunia'"
+        android:hint="Contoh: Buka Facebook atau Buat status 'Halo'"
         android:textColor="#FFFFFF"
         android:textColorHint="#888888"
         android:backgroundTint="#4CAF50"
