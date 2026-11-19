@@ -15,25 +15,25 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        try {
-            val app = application as AppContainer
-            if (!app::database.isInitialized) {
-                Toast.makeText(this, "Database gagal dimuat.", Toast.LENGTH_LONG).show()
-                return
-            }
-        } catch (e: Exception) {
-            Toast.makeText(this, "Aplikasi gagal dimuat: ${e.message}", Toast.LENGTH_LONG).show()
-            return
-        }
-
+        // Tombol Mulai Percakapan
         binding.btnChat.setOnClickListener {
-            startActivity(Intent(this, ChatActivity::class.java))
+            try {
+                startActivity(Intent(this, ChatActivity::class.java))
+            } catch (e: Exception) {
+                Toast.makeText(this, "Gagal membuka Chat: ${e.message}", Toast.LENGTH_LONG).show()
+            }
         }
 
+        // Tombol Riwayat
         binding.btnHistory.setOnClickListener {
-            startActivity(Intent(this, HistoryActivity::class.java))
+            try {
+                startActivity(Intent(this, HistoryActivity::class.java))
+            } catch (e: Exception) {
+                Toast.makeText(this, "Gagal membuka Riwayat: ${e.message}", Toast.LENGTH_LONG).show()
+            }
         }
 
+        // Tombol Pengaturan
         binding.btnSettings.setOnClickListener {
             try {
                 startActivity(Intent(this, SettingsActivity::class.java))
