@@ -53,7 +53,23 @@
             android:layout_height="50dp"
             android:text="Simpan Karakter"
             app:cornerRadius="12dp"
-            android:layout_marginBottom="32dp" />
+            android:layout_marginBottom="24dp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#333333"
+            android:layout_marginBottom="24dp" />
+
+        <!-- FITUR SUARA -->
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/switchTts"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Aktifkan Suara AI (Text-to-Speech)"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:layout_marginBottom="24dp" />
 
         <View
             android:layout_width="match_parent"
