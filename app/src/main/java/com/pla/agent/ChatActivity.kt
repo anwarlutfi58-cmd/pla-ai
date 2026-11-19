@@ -1,11 +1,13 @@
 package com.pla.agent
 
+import android.app.AlertDialog
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.pla.agent.databinding.ActivityChatBinding
 import kotlinx.coroutines.launch
+import java.io.File
 
 class ChatActivity : AppCompatActivity() {
 
@@ -32,10 +34,18 @@ class ChatActivity : AppCompatActivity() {
             updateAvatarAndTopic(currentTopic)
         }
 
-        if (!aiEngine.isLoaded()) {
-            muatModel()
-        } else {
-            binding.tvModelInfo.text = "Model siap!"
+        // Cek model pertama yang tersedia saat layar dibuka
+        val models = aiEngine.getAvailableModels()
+        if (models.isNotEmpty() && !aiEngine.isLoaded()) {
+            muatModelSpesifik(models.first())
+        } else if (models.isEmpty()) {
+            Toast.makeText(this, "Tidak ada model. Unduh di Pengaturan!", Toast.LENGTH_LONG).show()
+            finish()
+        }
+
+        // Tombol Ganti Model
+        binding.btnGantiModel.setOnClickListener {
+            tampilkanDialogGantiModel()
         }
 
         binding.btnSend.setOnClickListener {
@@ -47,9 +57,43 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
+    private fun tampilkanDialogGantiModel() {
+        val models = aiEngine.getAvailableModels()
+        if (models.isEmpty()) {
+            Toast.makeText(this, "Belum ada model yang diunduh.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val namaModel = models.map { it.name }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Pilih Model AI")
+            .setItems(namaModel) { _, which ->
+                val fileTerpilih = models[which]
+                muatModelSpesifik(fileTerpilih)
+            }
+            .show()
+    }
+
+    private fun muatModelSpesifik(file: File) {
+        binding.tvModelInfo.text = "Memuat ${file.name}..."
+        binding.btnGantiModel.isEnabled = false
+
+        lifecycleScope.launch {
+            val success = aiEngine.loadModel(file) { progress ->
+                runOnUiThread { binding.tvModelInfo.text = progress }
+            }
+            runOnUiThread {
+                binding.btnGantiModel.isEnabled = true
+                if (!success) {
+                    Toast.makeText(this@ChatActivity, "Gagal memuat model", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
     private fun updateAvatarAndTopic(topic: String) {
         binding.tvTopicInfo.text = "Topik: $topic"
-        
         when {
             topic.contains("Coding", ignoreCase = true) -> {
                 binding.imgAvatar.setImageResource(R.drawable.avatar_coding)
@@ -63,23 +107,10 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
-    private fun muatModel() {
-        lifecycleScope.launch {
-            val success = aiEngine.loadModel { progress ->
-                runOnUiThread { binding.tvModelInfo.text = progress }
-            }
-            if (!success) {
-                runOnUiThread {
-                    Toast.makeText(this@ChatActivity, "Gagal memuat. Unduh model di Pengaturan!", Toast.LENGTH_LONG).show()
-                    finish()
-                }
-            }
-        }
-    }
-
     private fun kirimPesan(userInput: String) {
         isGenerating = true
         binding.btnSend.isEnabled = false
+        binding.btnGantiModel.isEnabled = false
 
         chatHistory.append("Anda: $userInput\n\n")
         binding.tvChatHistory.text = chatHistory.toString()
@@ -94,10 +125,7 @@ class ChatActivity : AppCompatActivity() {
             aiEngine.generateResponse(
                 userInput = userInput,
                 onStatusUpdate = { status ->
-                    runOnUiThread {
-                        // Menampilkan status (misal: "Mencari referensi di GitHub...")
-                        binding.tvModelInfo.text = status
-                    }
+                    runOnUiThread { binding.tvModelInfo.text = status }
                 },
                 onToken = { token ->
                     runOnUiThread {
@@ -113,7 +141,8 @@ class ChatActivity : AppCompatActivity() {
                 chatHistory.append("\n\n")
                 isGenerating = false
                 binding.btnSend.isEnabled = true
-                binding.tvModelInfo.text = "Model siap!"
+                binding.btnGantiModel.isEnabled = true
+                binding.tvModelInfo.text = "Siap"
                 
                 voiceEngine.speak(aiResponse.toString(), currentTopic)
             }
