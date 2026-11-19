@@ -1,76 +1,123 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="24dp"
     android:background="#121212">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Pengaturan &amp; Fitur"
-        android:textColor="#FFFFFF"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="32dp" />
-
-    <com.google.android.material.materialswitch.MaterialSwitch
-        android:id="@+id/switchInternet"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Izinkan AI Akses Internet 24 Jam"
-        android:textColor="#FFFFFF"
-        android:textSize="16sp"
-        android:layout_marginBottom="24dp" />
+        android:orientation="vertical"
+        android:padding="24dp">
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnManageModels"
-        android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:text="Unduh / Kelola Model AI"
-        android:textSize="16sp"
-        android:layout_marginBottom="16dp"
-        app:cornerRadius="12dp" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pengaturan &amp; Fitur"
+            android:textColor="#FFFFFF"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="32dp" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnTopics"
-        android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:text="Pilih Topik Pembelajaran"
-        android:textSize="16sp"
-        android:layout_marginBottom="16dp"
-        app:backgroundTint="#333333"
-        app:cornerRadius="12dp" />
+        <!-- KUSTOMISASI KARAKTER -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Kustomisasi Karakter AI"
+            android:textColor="#4CAF50"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnUploadZip"
-        android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:text="Unggah Materi (File ZIP)"
-        android:textSize="16sp"
-        android:layout_marginBottom="16dp"
-        app:backgroundTint="#333333"
-        app:cornerRadius="12dp" />
+        <EditText
+            android:id="@+id/edtAiName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Nama Panggilan AI (Misal: Jarvis)"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#777777"
+            android:backgroundTint="#4CAF50"
+            android:layout_marginBottom="16dp" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnStartJarvis"
-        android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:text="Aktifkan Jarvis (AI Melayang)"
-        android:textSize="16sp"
-        android:layout_marginBottom="32dp"
-        app:backgroundTint="#4CAF50"
-        app:cornerRadius="12dp" />
+        <Spinner
+            android:id="@+id/spinnerAvatar"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:backgroundTint="#FFFFFF"
+            android:layout_marginBottom="16dp" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnBackSettings"
-        android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:text="Kembali ke Beranda"
-        android:textSize="16sp"
-        app:backgroundTint="#444444"
-        app:cornerRadius="12dp" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSimpanKarakter"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="Simpan Karakter"
+            app:cornerRadius="12dp"
+            android:layout_marginBottom="32dp" />
 
-</LinearLayout>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#333333"
+            android:layout_marginBottom="24dp" />
+
+        <!-- FITUR LAINNYA -->
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/switchInternet"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Izinkan AI Akses Internet 24 Jam"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:layout_marginBottom="24dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnManageModels"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="Unduh / Kelola Model AI"
+            android:textSize="16sp"
+            android:layout_marginBottom="16dp"
+            app:cornerRadius="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTopics"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="Pilih Topik Pembelajaran"
+            android:textSize="16sp"
+            android:layout_marginBottom="16dp"
+            app:backgroundTint="#333333"
+            app:cornerRadius="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnUploadZip"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="Unggah Materi (File ZIP)"
+            android:textSize="16sp"
+            android:layout_marginBottom="16dp"
+            app:backgroundTint="#333333"
+            app:cornerRadius="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnStartJarvis"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="Aktifkan Jarvis (AI Melayang)"
+            android:textSize="16sp"
+            android:layout_marginBottom="32dp"
+            app:backgroundTint="#4CAF50"
+            app:cornerRadius="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBackSettings"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="Kembali ke Beranda"
+            android:textSize="16sp"
+            app:backgroundTint="#444444"
+            app:cornerRadius="12dp" />
+
+    </LinearLayout>
+</ScrollView>
