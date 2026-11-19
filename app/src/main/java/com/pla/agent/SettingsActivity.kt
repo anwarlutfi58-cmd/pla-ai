@@ -34,7 +34,6 @@ class SettingsActivity : AppCompatActivity() {
             finish()
         }
 
-        // Tombol Jarvis
         binding.btnStartJarvis.setOnClickListener {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
                 val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
@@ -43,15 +42,18 @@ class SettingsActivity : AppCompatActivity() {
             } else {
                 startService(Intent(this, FloatingService::class.java))
                 Toast.makeText(this, "Jarvis (Melayang) Diaktifkan!", Toast.LENGTH_SHORT).show()
-                finish() // Tutup pengaturan agar gelembung terlihat
+                finish() 
             }
         }
 
+        // LOGIKA BELAJAR 24 JAM
         binding.switchInternet.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
-                Toast.makeText(this, "Akses internet AI diaktifkan", Toast.LENGTH_SHORT).show()
+                LearningScheduler.startLearning(this)
+                Toast.makeText(this, "AI sekarang akan belajar mandiri di latar belakang!", Toast.LENGTH_LONG).show()
             } else {
-                Toast.makeText(this, "Akses internet AI dimatikan", Toast.LENGTH_SHORT).show()
+                LearningScheduler.stopLearning(this)
+                Toast.makeText(this, "AI berhenti belajar mandiri.", Toast.LENGTH_SHORT).show()
             }
         }
     }
