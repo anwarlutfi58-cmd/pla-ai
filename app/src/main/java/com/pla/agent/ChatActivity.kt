@@ -16,7 +16,7 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var preferences: AppPreferences
     private val chatHistory = StringBuilder()
     private var isGenerating = false
-    private var currentTopic = "Umum"
+    private var currentVersion = "V1. pla"
     private var currentAiName = "PLA Agent"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,13 +33,13 @@ class ChatActivity : AppCompatActivity() {
         currentAiName = preferences.getAiName()
         binding.imgAvatar.setImageResource(preferences.getAiAvatar())
         
-        // Sembunyikan tombol ganti model karena kita tidak pakai model eksternal lagi
+        // Sembunyikan tombol ganti model karena kita murni pakai Independent AI
         binding.btnGantiModel.visibility = android.view.View.GONE
-        binding.tvModelInfo.text = "Independent AI Engine (V1. pla)"
+        binding.tvModelInfo.text = "Independent AI Engine"
 
         lifecycleScope.launch {
-            currentTopic = database.appDao().getActiveTopic()?.name ?: "Umum"
-            updateTopicInfo(currentTopic)
+            currentVersion = database.appDao().getActiveVersion()?.versionName ?: "V1. pla"
+            updateTopicInfo(currentVersion)
             muatRiwayatChat()
         }
 
@@ -64,14 +64,14 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateTopicInfo(topic: String) {
-        binding.tvTopicInfo.text = "Topik: $topic"
+    private fun updateTopicInfo(versionName: String) {
+        binding.tvTopicInfo.text = "Model: $versionName"
         if (preferences.getAiAvatar() == R.drawable.avatar_umum) {
             when {
-                topic.contains("Coding", ignoreCase = true) -> {
+                versionName.contains("Coding", ignoreCase = true) -> {
                     binding.imgAvatar.setImageResource(R.drawable.avatar_coding)
                 }
-                topic.contains("Kesehatan", ignoreCase = true) || topic.contains("Psikologi", ignoreCase = true) -> {
+                versionName.contains("Kesehatan", ignoreCase = true) || versionName.contains("Psikologi", ignoreCase = true) -> {
                     binding.imgAvatar.setImageResource(R.drawable.avatar_dokter)
                 }
                 else -> {
@@ -92,6 +92,9 @@ class ChatActivity : AppCompatActivity() {
         lifecycleScope.launch {
             database.appDao().insertChat(ChatHistoryEntity(sender = "User", message = userInput))
         }
+
+        chatHistory.append("$currentAiName: ")
+        binding.tvChatHistory.text = chatHistory.toString()
 
         val aiResponse = StringBuilder()
 
@@ -118,11 +121,11 @@ class ChatActivity : AppCompatActivity() {
                 binding.tvModelInfo.text = "Independent AI Engine"
                 
                 lifecycleScope.launch {
-                    database.appDao().insertChat(ChatHistoryEntity(sender = currentAiName, message = aiResponse.toString().replace("$currentAiName: ", "")))
+                    database.appDao().insertChat(ChatHistoryEntity(sender = currentAiName, message = aiResponse.toString()))
                 }
 
                 val isTtsOn = preferences.isTtsEnabled()
-                voiceEngine.speak(aiResponse.toString(), currentTopic, isTtsOn)
+                voiceEngine.speak(aiResponse.toString(), currentVersion, isTtsOn)
             }
         }
     }
