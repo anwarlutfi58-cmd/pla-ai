@@ -31,6 +31,7 @@
         <activity android:name=".TopicsActivity" />
         <activity android:name=".ZipUploadActivity" />
         <activity android:name=".ModelDownloadActivity" />
+        <activity android:name=".HistoryActivity" />
 
         <service
             android:name=".FloatingService"
