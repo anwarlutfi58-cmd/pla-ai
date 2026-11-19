@@ -2,52 +2,62 @@ package com.pla.agent
 
 import androidx.room.*
 
+@Entity(tableName = "ai_versions")
+data class VersionEntity(
+    @PrimaryKey val versionName: String,
+    val createdAt: Long = System.currentTimeMillis(),
+    val isActiveForChat: Boolean = false
+)
+
 @Entity(tableName = "ai_memory")
 data class MemoryEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val topic: String,
+    val versionName: String,
+    val sourceUrl: String,
     val content: String,
     val timestamp: Long = System.currentTimeMillis()
 )
 
-@Entity(tableName = "user_topics")
-data class TopicEntity(
-    @PrimaryKey val name: String,
-    val isActive: Boolean = false
-)
-
-// TABEL BARU: Untuk menyimpan riwayat chat
 @Entity(tableName = "chat_history")
 data class ChatHistoryEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val sender: String, // "User" atau "AI"
+    val sender: String,
     val message: String,
     val timestamp: Long = System.currentTimeMillis()
 )
 
 @Dao
 interface AppDao {
-    // Fungsi Memori AI
+    // Fungsi Versi
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertVersion(version: VersionEntity)
+
+    @Query("SELECT * FROM ai_versions ORDER BY createdAt ASC")
+    suspend fun getAllVersions(): List<VersionEntity>
+
+    @Query("UPDATE ai_versions SET isActiveForChat = 0")
+    suspend fun clearActiveVersion()
+
+    @Query("UPDATE ai_versions SET isActiveForChat = 1 WHERE versionName = :versionName")
+    suspend fun setActiveVersion(versionName: String)
+
+    @Query("SELECT * FROM ai_versions WHERE isActiveForChat = 1 LIMIT 1")
+    suspend fun getActiveVersion(): VersionEntity?
+
+    // Fungsi Memori
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMemory(memory: MemoryEntity)
 
-    @Query("SELECT * FROM ai_memory WHERE topic = :topic ORDER BY timestamp DESC LIMIT 10")
-    suspend fun getMemoriesByTopic(topic: String): List<MemoryEntity>
+    @Query("SELECT * FROM ai_memory WHERE versionName = :versionName ORDER BY timestamp DESC")
+    suspend fun getMemoriesByVersion(versionName: String): List<MemoryEntity>
 
-    // Fungsi Topik
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertTopic(topic: TopicEntity)
+    @Query("SELECT DISTINCT sourceUrl FROM ai_memory WHERE versionName = :versionName")
+    suspend fun getSourcesByVersion(versionName: String): List<String>
 
-    @Query("UPDATE user_topics SET isActive = 0")
-    suspend fun clearActiveTopics()
+    @Query("DELETE FROM ai_memory WHERE versionName = :versionName AND sourceUrl = :sourceUrl")
+    suspend fun deleteMemoriesBySource(versionName: String, sourceUrl: String)
 
-    @Query("UPDATE user_topics SET isActive = 1 WHERE name = :topicName")
-    suspend fun setActiveTopic(topicName: String)
-    
-    @Query("SELECT * FROM user_topics WHERE isActive = 1 LIMIT 1")
-    suspend fun getActiveTopic(): TopicEntity?
-
-    // Fungsi Riwayat Chat
+    // Fungsi Chat
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertChat(chat: ChatHistoryEntity)
 
@@ -61,7 +71,7 @@ interface AppDao {
     suspend fun clearAllChats()
 }
 
-@Database(entities = [MemoryEntity::class, TopicEntity::class, ChatHistoryEntity::class], version = 2, exportSchema = false)
+@Database(entities = [MemoryEntity::class, VersionEntity::class, ChatHistoryEntity::class], version = 4, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun appDao(): AppDao
 }
