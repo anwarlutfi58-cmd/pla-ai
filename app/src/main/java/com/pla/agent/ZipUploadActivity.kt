@@ -44,13 +44,19 @@ class ZipUploadActivity : AppCompatActivity() {
                     if (isiTeks.startsWith("Gagal") || isiTeks.startsWith("File")) {
                         binding.tvStatusZip.text = isiTeks
                     } else {
-                        // Simpan ke Database
-                        val activeTopic = database.appDao().getActiveTopic()?.name ?: "Umum"
+                        // Dapatkan versi aktif
+                        val activeVersion = database.appDao().getActiveVersion()?.versionName ?: "V1. pla"
+                        
+                        // Simpan ke database dengan parameter baru
                         database.appDao().insertMemory(
-                            MemoryEntity(topic = activeTopic, content = isiTeks)
+                            MemoryEntity(
+                                versionName = activeVersion, 
+                                sourceUrl = "ZIP Upload",
+                                content = isiTeks
+                            )
                         )
                         
-                        binding.tvStatusZip.text = "Berhasil! AI telah mempelajari dokumen ini untuk topik $activeTopic."
+                        binding.tvStatusZip.text = "Berhasil! Dokumen diserap ke model $activeVersion."
                         Toast.makeText(this@ZipUploadActivity, "Materi disimpan ke Database!", Toast.LENGTH_LONG).show()
                     }
                 }
