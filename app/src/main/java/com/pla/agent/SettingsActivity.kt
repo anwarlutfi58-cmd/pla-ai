@@ -30,6 +30,7 @@ class SettingsActivity : AppCompatActivity() {
         database = app.database
         dataImporter = DataImporter(database)
 
+        // Muat Status Switch (Pastikan ID ini ada di activity_settings.xml)
         binding.switchInternet.isChecked = preferences.isInternetEnabled()
         binding.switchTts.isChecked = preferences.isTtsEnabled()
 
@@ -89,7 +90,7 @@ class SettingsActivity : AppCompatActivity() {
         lifecycleScope.launch {
             var versions = database.appDao().getAllVersions()
             
-            // Jika belum ada versi sama sekali, buat V1 otomatis
+            // Jika belum ada versi, buat V1 otomatis
             if (versions.isEmpty()) {
                 database.appDao().insertVersion(VersionEntity(versionName = "V1. pla", isActiveForChat = true))
                 versions = database.appDao().getAllVersions()
