@@ -61,6 +61,31 @@
             android:background="#333333"
             android:layout_marginBottom="24dp" />
 
+        <!-- FITUR JARVIS (Aksesibilitas) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnIzinAksesibilitas"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="1. Izinkan Aksesibilitas (Wajib)"
+            android:backgroundTint="#FF9800"
+            app:cornerRadius="12dp"
+            android:layout_marginBottom="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnStartJarvis"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="2. Aktifkan Jarvis (AI Melayang)"
+            android:backgroundTint="#4CAF50"
+            app:cornerRadius="12dp"
+            android:layout_marginBottom="24dp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#333333"
+            android:layout_marginBottom="24dp" />
+
         <!-- FITUR LAINNYA -->
         <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/switchInternet"
@@ -98,16 +123,6 @@
             android:textSize="16sp"
             android:layout_marginBottom="16dp"
             app:backgroundTint="#333333"
-            app:cornerRadius="12dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnStartJarvis"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:text="Aktifkan Jarvis (AI Melayang)"
-            android:textSize="16sp"
-            android:layout_marginBottom="32dp"
-            app:backgroundTint="#4CAF50"
             app:cornerRadius="12dp" />
 
         <com.google.android.material.button.MaterialButton
