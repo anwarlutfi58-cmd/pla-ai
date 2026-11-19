@@ -19,10 +19,16 @@ class ChatActivity : AppCompatActivity() {
         binding = ActivityChatBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        aiEngine = PlAiEngine(this)
+        // AMBIL MESIN AI DARI GUDANG GLOBAL (AppContainer)
+        // Agar memori dari file ZIP yang diunggah tadi langsung terbaca di sini
+        aiEngine = (application as AppContainer).aiEngine
 
-        // Memuat model saat layar dibuka
-        muatModel()
+        // Jika model belum dimuat, muat sekarang
+        if (!aiEngine.isLoaded()) {
+            muatModel()
+        } else {
+            binding.tvModelInfo.text = "Model siap!"
+        }
 
         binding.btnSend.setOnClickListener {
             val input = binding.edtMessage.text.toString().trim()
@@ -53,16 +59,15 @@ class ChatActivity : AppCompatActivity() {
         isGenerating = true
         binding.btnSend.isEnabled = false
 
-        // Tampilkan pesan user
         chatHistory.append("Anda: $userInput\n\n")
         binding.tvChatHistory.text = chatHistory.toString()
         scrollKeBawah()
 
-        // Tampilkan placeholder AI
         chatHistory.append("PLA Agent: ")
         binding.tvChatHistory.text = chatHistory.toString()
 
         lifecycleScope.launch {
+            // Topic "Umum" bisa kita ubah nanti agar membaca dari database Topik
             aiEngine.generateResponse(userInput, topic = "Umum") { token ->
                 runOnUiThread {
                     chatHistory.append(token)
