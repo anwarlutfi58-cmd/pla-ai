@@ -27,7 +27,6 @@ class ChatActivity : AppCompatActivity() {
         database = app.database
         voiceEngine = VoiceEngine(this)
 
-        // Cek Topik & Ubah Avatar
         lifecycleScope.launch {
             currentTopic = database.appDao().getActiveTopic()?.name ?: "Umum"
             updateAvatarAndTopic(currentTopic)
@@ -92,21 +91,30 @@ class ChatActivity : AppCompatActivity() {
         val aiResponse = StringBuilder()
 
         lifecycleScope.launch {
-            // AI Membaca Database (Topik & Memori) dan menghasilkan jawaban
-            aiEngine.generateResponse(userInput) { token ->
-                runOnUiThread {
-                    aiResponse.append(token)
-                    chatHistory.append(token)
-                    binding.tvChatHistory.text = chatHistory.toString()
-                    scrollKeBawah()
+            aiEngine.generateResponse(
+                userInput = userInput,
+                onStatusUpdate = { status ->
+                    runOnUiThread {
+                        // Menampilkan status (misal: "Mencari referensi di GitHub...")
+                        binding.tvModelInfo.text = status
+                    }
+                },
+                onToken = { token ->
+                    runOnUiThread {
+                        aiResponse.append(token)
+                        chatHistory.append(token)
+                        binding.tvChatHistory.text = chatHistory.toString()
+                        scrollKeBawah()
+                    }
                 }
-            }
+            )
+            
             runOnUiThread {
                 chatHistory.append("\n\n")
                 isGenerating = false
                 binding.btnSend.isEnabled = true
+                binding.tvModelInfo.text = "Model siap!"
                 
-                // EVOLUSI SUARA: AI berbicara dengan suara sesuai topik
                 voiceEngine.speak(aiResponse.toString(), currentTopic)
             }
         }
