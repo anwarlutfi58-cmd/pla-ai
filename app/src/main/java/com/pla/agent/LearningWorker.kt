@@ -1,6 +1,8 @@
 package com.pla.agent
 
 import android.content.Context
+import android.media.AudioManager
+import android.os.PowerManager
 import androidx.room.Room
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -14,6 +16,24 @@ class LearningWorker(appContext: Context, params: WorkerParameters) : CoroutineW
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         try {
+            // ==========================================
+            // SMART IDLE DETECTION (CEK APAKAH USER SEDANG PAKAI HP)
+            // ==========================================
+            val powerManager = applicationContext.getSystemService(Context.POWER_SERVICE) as PowerManager
+            val audioManager = applicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
+            val isScreenOn = powerManager.isInteractive
+            val isAudioPlaying = audioManager.isMusicActive // Deteksi TikTok/Video/Telepon
+
+            if (isScreenOn || isAudioPlaying) {
+                // Jika user sedang main HP atau ada suara, BATALKAN proses belajar.
+                // Coba lagi nanti.
+                return@withContext Result.retry()
+            }
+
+            // ==========================================
+            // PROSES BELAJAR (HANYA JIKA HP TIDAK DIPAKAI)
+            // ==========================================
             val database = Room.databaseBuilder(
                 applicationContext,
                 AppDatabase::class.java,
@@ -26,15 +46,12 @@ class LearningWorker(appContext: Context, params: WorkerParameters) : CoroutineW
             var url = ""
             when {
                 activeTopic.contains("Coding", ignoreCase = true) -> {
-                    // Belajar dari GitHub API (Ambil 1 snippet kode acak)
                     url = "https://api.github.com/search/repositories?q=android+kotlin&sort=stars&order=desc"
                 }
                 activeTopic.contains("Umum", ignoreCase = true) -> {
-                    // Belajar dari Wikipedia (Artikel Acak)
                     url = "https://id.wikipedia.org/api/rest_v1/page/random/summary"
                 }
                 else -> {
-                    // Cari di Wikipedia sesuai Topik
                     url = "https://id.wikipedia.org/w/api.php?action=query&list=search&srsearch=${activeTopic.replace(" ", "+")}&format=json"
                 }
             }
@@ -69,7 +86,6 @@ class LearningWorker(appContext: Context, params: WorkerParameters) : CoroutineW
                 }
             }
 
-            // Simpan ilmu yang didapat ke Database AI
             if (learnedText.isNotEmpty()) {
                 database.appDao().insertMemory(
                     MemoryEntity(topic = activeTopic, content = learnedText)
