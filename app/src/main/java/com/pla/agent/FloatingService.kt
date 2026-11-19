@@ -1,5 +1,6 @@
 package com.pla.agent
 
+import android.app.AlertDialog
 import android.app.Service
 import android.content.Intent
 import android.graphics.PixelFormat
@@ -10,7 +11,10 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.widget.Button
+import android.widget.EditText
 import android.widget.ImageView
+import android.widget.Toast
 
 class FloatingService : Service() {
 
@@ -22,7 +26,6 @@ class FloatingService : Service() {
         super.onCreate()
         
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        
         floatingView = LayoutInflater.from(this).inflate(R.layout.floating_window, null)
         
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -71,17 +74,44 @@ class FloatingService : Service() {
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    // Jika pergerakan sangat kecil, anggap sebagai klik (buka Chat)
+                    // Jika pergerakan sangat kecil, anggap sebagai klik
                     if (Math.abs(event.rawX - initialTouchX) < 10 && Math.abs(event.rawY - initialTouchY) < 10) {
-                        val intent = Intent(this@FloatingService, ChatActivity::class.java)
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        startActivity(intent)
+                        tampilkanMenuPerintah()
                     }
                     true
                 }
                 else -> false
             }
         }
+    }
+
+    private fun tampilkanMenuPerintah() {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.floating_command, null)
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        // Agar dialog muncul di atas aplikasi lain
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            dialog.window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
+        } else {
+            dialog.window?.setType(WindowManager.LayoutParams.TYPE_PHONE)
+        }
+
+        val edtCommand = dialogView.findViewById<EditText>(R.id.edtJarvisCommand)
+        val btnJalankan = dialogView.findViewById<Button>(R.id.btnJalankan)
+
+        btnJalankan.setOnClickListener {
+            val command = edtCommand.text.toString()
+            if (command.isNotEmpty()) {
+                // Kirim perintah ke ScreenReaderService
+                JarvisBridge.screenReaderService?.executeCommand(command)
+                Toast.makeText(this, "Jarvis sedang memproses...", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+            }
+        }
+
+        dialog.show()
     }
 
     override fun onDestroy() {
