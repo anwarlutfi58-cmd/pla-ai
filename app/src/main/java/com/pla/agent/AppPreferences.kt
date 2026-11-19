@@ -13,4 +13,21 @@ class AppPreferences(context: Context) {
     fun isInternetEnabled(): Boolean {
         return prefs.getBoolean("internet_enabled", false)
     }
+
+    // Fungsi untuk Nama dan Avatar AI
+    fun setAiName(name: String) {
+        prefs.edit().putString("ai_name", name).apply()
+    }
+
+    fun getAiName(): String {
+        return prefs.getString("ai_name", "PLA Agent") ?: "PLA Agent"
+    }
+
+    fun setAiAvatar(avatarId: Int) {
+        prefs.edit().putInt("ai_avatar", avatarId).apply()
+    }
+
+    fun getAiAvatar(): Int {
+        return prefs.getInt("ai_avatar", R.drawable.avatar_umum)
+    }
 }
