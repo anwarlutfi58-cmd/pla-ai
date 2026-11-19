@@ -11,19 +11,28 @@ class ChatActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityChatBinding
     private lateinit var aiEngine: PlAiEngine
+    private lateinit var database: AppDatabase
+    private lateinit var voiceEngine: VoiceEngine
     private val chatHistory = StringBuilder()
     private var isGenerating = false
+    private var currentTopic = "Umum"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityChatBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // AMBIL MESIN AI DARI GUDANG GLOBAL (AppContainer)
-        // Agar memori dari file ZIP yang diunggah tadi langsung terbaca di sini
-        aiEngine = (application as AppContainer).aiEngine
+        val app = application as AppContainer
+        aiEngine = app.aiEngine
+        database = app.database
+        voiceEngine = VoiceEngine(this)
 
-        // Jika model belum dimuat, muat sekarang
+        // Cek Topik & Ubah Avatar
+        lifecycleScope.launch {
+            currentTopic = database.appDao().getActiveTopic()?.name ?: "Umum"
+            updateAvatarAndTopic(currentTopic)
+        }
+
         if (!aiEngine.isLoaded()) {
             muatModel()
         } else {
@@ -39,12 +48,26 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
+    private fun updateAvatarAndTopic(topic: String) {
+        binding.tvTopicInfo.text = "Topik: $topic"
+        
+        when {
+            topic.contains("Coding", ignoreCase = true) -> {
+                binding.imgAvatar.setImageResource(R.drawable.avatar_coding)
+            }
+            topic.contains("Kesehatan", ignoreCase = true) || topic.contains("Psikologi", ignoreCase = true) -> {
+                binding.imgAvatar.setImageResource(R.drawable.avatar_dokter)
+            }
+            else -> {
+                binding.imgAvatar.setImageResource(R.drawable.avatar_umum)
+            }
+        }
+    }
+
     private fun muatModel() {
         lifecycleScope.launch {
             val success = aiEngine.loadModel { progress ->
-                runOnUiThread {
-                    binding.tvModelInfo.text = progress
-                }
+                runOnUiThread { binding.tvModelInfo.text = progress }
             }
             if (!success) {
                 runOnUiThread {
@@ -66,10 +89,13 @@ class ChatActivity : AppCompatActivity() {
         chatHistory.append("PLA Agent: ")
         binding.tvChatHistory.text = chatHistory.toString()
 
+        val aiResponse = StringBuilder()
+
         lifecycleScope.launch {
-            // Topic "Umum" bisa kita ubah nanti agar membaca dari database Topik
-            aiEngine.generateResponse(userInput, topic = "Umum") { token ->
+            // AI Membaca Database (Topik & Memori) dan menghasilkan jawaban
+            aiEngine.generateResponse(userInput) { token ->
                 runOnUiThread {
+                    aiResponse.append(token)
                     chatHistory.append(token)
                     binding.tvChatHistory.text = chatHistory.toString()
                     scrollKeBawah()
@@ -79,6 +105,9 @@ class ChatActivity : AppCompatActivity() {
                 chatHistory.append("\n\n")
                 isGenerating = false
                 binding.btnSend.isEnabled = true
+                
+                // EVOLUSI SUARA: AI berbicara dengan suara sesuai topik
+                voiceEngine.speak(aiResponse.toString(), currentTopic)
             }
         }
     }
@@ -87,5 +116,11 @@ class ChatActivity : AppCompatActivity() {
         binding.scrollView.post {
             binding.scrollView.fullScroll(android.view.View.FOCUS_DOWN)
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        voiceEngine.stop()
+        voiceEngine.shutdown()
     }
 }
