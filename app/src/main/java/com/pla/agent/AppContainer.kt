@@ -20,14 +20,14 @@ class AppContainer : Application() {
         // Inisialisasi Preferences
         preferences = AppPreferences(this)
 
-        // Inisialisasi Database Room
+        // Inisialisasi Database Room (fallbackToDestructiveMigration agar tidak crash saat versi DB berubah)
         database = Room.databaseBuilder(
             applicationContext,
             AppDatabase::class.java,
             "pla-agent-db"
         ).fallbackToDestructiveMigration().build()
 
-        // Inisialisasi Mesin AI dengan Database
+        // Inisialisasi Mesin AI
         aiEngine = PlAiEngine(this, database.appDao())
     }
 }
