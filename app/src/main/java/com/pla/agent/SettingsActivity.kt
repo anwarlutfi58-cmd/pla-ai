@@ -54,7 +54,9 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
+        // Muat Status Switch
         binding.switchInternet.isChecked = preferences.isInternetEnabled()
+        binding.switchTts.isChecked = preferences.isTtsEnabled()
 
         // BUKA PENGATURAN AKSESIBILITAS
         binding.btnIzinAksesibilitas.setOnClickListener {
@@ -100,6 +102,10 @@ class SettingsActivity : AppCompatActivity() {
                 LearningScheduler.stopLearning(this)
                 Toast.makeText(this, "AI berhenti belajar mandiri.", Toast.LENGTH_SHORT).show()
             }
+        }
+
+        binding.switchTts.setOnCheckedChangeListener { _, isChecked ->
+            preferences.setTtsEnabled(isChecked)
         }
     }
 }
