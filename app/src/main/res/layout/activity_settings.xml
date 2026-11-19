@@ -18,41 +18,94 @@
             android:textColor="#FFFFFF"
             android:textSize="28sp"
             android:textStyle="bold"
-            android:layout_marginBottom="32dp" />
+            android:layout_marginBottom="24dp" />
 
-        <!-- KUSTOMISASI KARAKTER -->
+        <!-- SISTEM VERSI MODEL -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Kustomisasi Karakter AI"
+            android:text="Pilih Versi Model (Untuk Dilatih)"
             android:textColor="#4CAF50"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:textStyle="bold"
             android:layout_marginBottom="8dp" />
 
-        <EditText
-            android:id="@+id/edtAiName"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Nama Panggilan AI (Misal: Jarvis)"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <Spinner
+                android:id="@+id/spinnerVersion"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:backgroundTint="#FFFFFF" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBuatVersiBaru"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:text="+ Baru"
+                android:layout_marginStart="8dp"
+                app:cornerRadius="8dp" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tambahkan Link Data ke Versi Ini:"
+            android:textColor="#2196F3"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp" />
+
+        <EditText
+            android:id="@+id/edtGithubRawUrl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Tempel Link Raw GitHub (.json)"
             android:textColor="#FFFFFF"
             android:textColorHint="#777777"
-            android:backgroundTint="#4CAF50"
-            android:layout_marginBottom="16dp" />
-
-        <Spinner
-            android:id="@+id/spinnerAvatar"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:backgroundTint="#FFFFFF"
-            android:layout_marginBottom="16dp" />
+            android:backgroundTint="#2196F3"
+            android:textSize="12sp"
+            android:layout_marginBottom="8dp" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnSimpanKarakter"
+            android:id="@+id/btnSyncKnowledge"
             android:layout_width="match_parent"
             android:layout_height="50dp"
-            android:text="Simpan Karakter"
+            android:text="Tambah Link ke Versi Ini"
+            android:backgroundTint="#2196F3"
             app:cornerRadius="12dp"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:id="@+id/tvSyncStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Belum ada data ditarik."
+            android:textColor="#AAAAAA"
+            android:textSize="12sp"
+            android:gravity="center"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Link yang Sudah Ditambahkan di Versi Ini:"
+            android:textColor="#FF9800"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <ListView
+            android:id="@+id/listSources"
+            android:layout_width="match_parent"
+            android:layout_height="150dp"
+            android:background="#1E1E1E"
             android:layout_marginBottom="24dp" />
 
         <View
@@ -61,57 +114,15 @@
             android:background="#333333"
             android:layout_marginBottom="24dp" />
 
-        <!-- FITUR SUARA -->
         <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/switchTts"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Aktifkan Suara AI (Text-to-Speech)"
+            android:text="Aktifkan Suara AI"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="16dp" />
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#333333"
-            android:layout_marginBottom="24dp" />
-
-        <!-- FITUR JARVIS (Aksesibilitas & Background) -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnIzinAksesibilitas"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:text="1. Izinkan Aksesibilitas (Wajib)"
-            android:backgroundTint="#FF9800"
-            app:cornerRadius="12dp"
-            android:layout_marginBottom="8dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnStartJarvis"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:text="2. Aktifkan Jarvis (AI Melayang)"
-            android:backgroundTint="#4CAF50"
-            app:cornerRadius="12dp"
-            android:layout_marginBottom="8dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnStopJarvis"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:text="Matikan Jarvis"
-            android:backgroundTint="#F44336"
-            app:cornerRadius="12dp"
-            android:layout_marginBottom="24dp" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#333333"
-            android:layout_marginBottom="24dp" />
-
-        <!-- FITUR LAINNYA -->
         <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/switchInternet"
             android:layout_width="match_parent"
@@ -122,41 +133,20 @@
             android:layout_marginBottom="24dp" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnManageModels"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:text="Unduh / Kelola Model AI"
-            android:textSize="16sp"
-            android:layout_marginBottom="16dp"
-            app:cornerRadius="12dp" />
-
-        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnTopics"
             android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:text="Pilih Topik Pembelajaran"
-            android:textSize="16sp"
-            android:layout_marginBottom="16dp"
-            app:backgroundTint="#333333"
-            app:cornerRadius="12dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnUploadZip"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:text="Unggah Materi (File ZIP)"
-            android:textSize="16sp"
-            android:layout_marginBottom="16dp"
-            app:backgroundTint="#333333"
-            app:cornerRadius="12dp" />
+            android:layout_height="50dp"
+            android:text="Pilih Versi Model untuk Chat"
+            android:backgroundTint="#FF9800"
+            app:cornerRadius="12dp"
+            android:layout_marginBottom="16dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnBackSettings"
             android:layout_width="match_parent"
-            android:layout_height="60dp"
+            android:layout_height="50dp"
             android:text="Kembali ke Beranda"
-            android:textSize="16sp"
-            app:backgroundTint="#444444"
+            android:backgroundTint="#444444"
             app:cornerRadius="12dp" />
 
     </LinearLayout>
