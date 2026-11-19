@@ -22,8 +22,29 @@ class SettingsActivity : AppCompatActivity() {
             startActivity(Intent(this, ModelDownloadActivity::class.java))
         }
 
+        binding.btnTopics.setOnClickListener {
+            startActivity(Intent(this, TopicsActivity::class.java))
+        }
+
+        binding.btnUploadZip.setOnClickListener {
+            startActivity(Intent(this, ZipUploadActivity::class.java))
+        }
+
         binding.btnBackSettings.setOnClickListener {
             finish()
+        }
+
+        // Tombol Jarvis
+        binding.btnStartJarvis.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+                startActivity(intent)
+                Toast.makeText(this, "Izinkan aplikasi ini untuk muncul di atas aplikasi lain", Toast.LENGTH_LONG).show()
+            } else {
+                startService(Intent(this, FloatingService::class.java))
+                Toast.makeText(this, "Jarvis (Melayang) Diaktifkan!", Toast.LENGTH_SHORT).show()
+                finish() // Tutup pengaturan agar gelembung terlihat
+            }
         }
 
         binding.switchInternet.setOnCheckedChangeListener { _, isChecked ->
@@ -32,19 +53,6 @@ class SettingsActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(this, "Akses internet AI dimatikan", Toast.LENGTH_SHORT).show()
             }
-        }
-
-        // Tombol untuk menyalakan Jarvis (Floating Overlay)
-        binding.btnManageModels.setOnLongClickListener {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
-                startActivity(intent)
-                Toast.makeText(this, "Izinkan aplikasi ini untuk muncul di atas aplikasi lain", Toast.LENGTH_LONG).show()
-            } else {
-                startService(Intent(this, FloatingService::class.java))
-                Toast.makeText(this, "Jarvis (Melayang) Diaktifkan!", Toast.LENGTH_SHORT).show()
-            }
-            true
         }
     }
 }
