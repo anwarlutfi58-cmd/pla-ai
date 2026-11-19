@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center"
+    android:background="#121212">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Unggah Materi (ZIP)"
+        android:textColor="#FFFFFF"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Pilih file ZIP berisi dokumen yang ingin dipelajari AI."
+        android:textColor="#AAAAAA"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:layout_marginBottom="32dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnPilihZip"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="Pilih File ZIP"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        app:cornerRadius="12dp" />
+
+    <TextView
+        android:id="@+id/tvStatusZip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="Belum ada file dipilih"
+        android:textColor="#4CAF50"
+        android:textSize="14sp"
+        android:gravity="center" />
+
+</LinearLayout>
