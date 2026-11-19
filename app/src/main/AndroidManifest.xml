@@ -1,16 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Izin Dasar -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    
-    <!-- Izin Jarvis (Melihat layar & Melayang) -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    
-    <!-- Izin Membaca File ZIP -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
 
     <application
@@ -21,7 +16,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Material3.DayNight.NoActionBar">
 
-        <!-- Layar Beranda -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -32,19 +26,17 @@
             </intent-filter>
         </activity>
 
-        <!-- Layar Lainnya (Akan kita isi nanti) -->
         <activity android:name=".ChatActivity" />
         <activity android:name=".SettingsActivity" />
         <activity android:name=".TopicsActivity" />
+        <activity android:name=".ZipUploadActivity" />
         <activity android:name=".ModelDownloadActivity" />
 
-        <!-- Layanan AI Melayang (Jarvis) -->
         <service
             android:name=".FloatingService"
             android:enabled="true"
             android:exported="false" />
             
-        <!-- Layanan Membaca Layar (Aksesibilitas) -->
         <service
             android:name=".ScreenReaderService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
