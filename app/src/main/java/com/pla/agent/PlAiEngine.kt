@@ -9,12 +9,10 @@ class PlAiEngine(
     private val appDao: AppDao
 ) {
     private val analyzer = LanguageAnalyzer()
-    private val githubScraper = GitHubScraper()
     private val preferences = AppPreferences(context)
 
-    // AI selalu dianggap siap karena tidak butuh model eksternal
-    fun isLoaded(): Boolean = true 
-    fun unloadModel() {} // Dikosongkan karena tidak ada model
+    fun isLoaded(): Boolean = true
+    fun unloadModel() {}
 
     suspend fun generateResponse(
         userInput: String, 
@@ -22,12 +20,12 @@ class PlAiEngine(
         onToken: (String) -> Unit
     ) = withContext(Dispatchers.IO) {
         
-        val activeTopic = appDao.getActiveTopic()?.name ?: "Umum"
+        // Ambil versi yang sedang aktif
+        val activeVersion = appDao.getActiveVersion()?.versionName ?: "V1. pla"
         val aiName = preferences.getAiName()
         
-        onStatusUpdate("Menganalisis bahasa...")
+        onStatusUpdate("Menganalisis dengan $activeVersion...")
         
-        // 1. Pecah pertanyaan user menjadi kata kunci
         val inputTokens = analyzer.tokenize(userInput)
         
         if (inputTokens.isEmpty()) {
@@ -35,13 +33,12 @@ class PlAiEngine(
             return@withContext
         }
 
-        // 2. Ambil semua ingatan dari Database
-        val memories = appDao.getMemoriesByTopic(activeTopic)
+        // Ambil ingatan dari versi yang aktif saja
+        val memories = appDao.getMemoriesByVersion(activeVersion)
         
         var bestMatchContent = ""
         var highestScore = 0
 
-        // 3. Cari ingatan yang paling cocok
         for (memory in memories) {
             val score = analyzer.hitungSkorKecocokan(inputTokens, memory.content)
             if (score > highestScore) {
@@ -50,36 +47,24 @@ class PlAiEngine(
             }
         }
 
-        // 4. Susun Jawaban
         var finalResponse = ""
 
         if (highestScore > 0) {
-            // Jika ada kecocokan di database
-            // Ambil teks aslinya (jika formatnya JSON, kita bersihkan sedikit)
             finalResponse = bestMatchContent
                 .replace("{", "").replace("}", "")
                 .replace("\"", "").replace("id:", "")
                 .replace("topik:", "").replace("kategori:", "")
                 .replace("isi:", "")
                 .trim()
-            
-            onStatusUpdate("Ingatan ditemukan!")
+            onStatusUpdate("Ingatan ditemukan di $activeVersion")
         } else {
-            // Jika tidak ada di database, coba cari di GitHub (jika topik Coding)
-            if (activeTopic.contains("Coding", ignoreCase = true) && preferences.isInternetEnabled()) {
-                onStatusUpdate("Mencari referensi di GitHub...")
-                val githubRef = githubScraper.cariReferensi(userInput)
-                finalResponse = "Saya belum mempelajari hal itu secara spesifik. Namun, ini referensi dari GitHub:\n\n$githubRef"
-            } else {
-                finalResponse = "Maaf, saya belum mempelajari topik ini. Tolong tambahkan pengetahuannya di menu Pengaturan."
-            }
+            finalResponse = "Maaf, saya belum mempelajari hal itu di versi $activeVersion. Silakan tambahkan link data di Pengaturan."
         }
 
-        // 5. Ketik jawaban huruf per huruf (Simulasi)
-        val completeResponse = "$aiName: $finalResponse"
+        val completeResponse = finalResponse
         for (char in completeResponse) {
             onToken(char.toString())
-            Thread.sleep(20) // Efek mengetik
+            Thread.sleep(20)
         }
     }
 }
