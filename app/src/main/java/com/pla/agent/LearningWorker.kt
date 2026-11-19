@@ -16,43 +16,34 @@ class LearningWorker(appContext: Context, params: WorkerParameters) : CoroutineW
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         try {
-            // ==========================================
-            // SMART IDLE DETECTION (CEK APAKAH USER SEDANG PAKAI HP)
-            // ==========================================
             val powerManager = applicationContext.getSystemService(Context.POWER_SERVICE) as PowerManager
             val audioManager = applicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
             val isScreenOn = powerManager.isInteractive
-            val isAudioPlaying = audioManager.isMusicActive // Deteksi TikTok/Video/Telepon
+            val isAudioPlaying = audioManager.isMusicActive
 
+            // Jangan belajar jika HP sedang dipakai
             if (isScreenOn || isAudioPlaying) {
-                // Jika user sedang main HP atau ada suara, BATALKAN proses belajar.
-                // Coba lagi nanti.
                 return@withContext Result.retry()
             }
 
-            // ==========================================
-            // PROSES BELAJAR (HANYA JIKA HP TIDAK DIPAKAI)
-            // ==========================================
             val database = Room.databaseBuilder(
                 applicationContext,
                 AppDatabase::class.java,
                 "pla-agent-db"
             ).fallbackToDestructiveMigration().build()
 
-            val activeTopic = database.appDao().getActiveTopic()?.name ?: "Umum"
+            // Dapatkan versi AI yang sedang aktif
+            val activeVersion = database.appDao().getActiveVersion()?.versionName ?: "V1. pla"
             val client = OkHttpClient()
 
             var url = ""
             when {
-                activeTopic.contains("Coding", ignoreCase = true) -> {
+                activeVersion.contains("Coding", ignoreCase = true) -> {
                     url = "https://api.github.com/search/repositories?q=android+kotlin&sort=stars&order=desc"
                 }
-                activeTopic.contains("Umum", ignoreCase = true) -> {
-                    url = "https://id.wikipedia.org/api/rest_v1/page/random/summary"
-                }
                 else -> {
-                    url = "https://id.wikipedia.org/w/api.php?action=query&list=search&srsearch=${activeTopic.replace(" ", "+")}&format=json"
+                    url = "https://id.wikipedia.org/api/rest_v1/page/random/summary"
                 }
             }
 
@@ -66,29 +57,27 @@ class LearningWorker(appContext: Context, params: WorkerParameters) : CoroutineW
 
             if (response.isSuccessful) {
                 val bodyString = response.body?.string() ?: ""
-                if (activeTopic.contains("Coding", ignoreCase = true)) {
+                if (activeVersion.contains("Coding", ignoreCase = true)) {
                     val json = JSONObject(bodyString)
                     val items = json.getJSONArray("items")
                     if (items.length() > 0) {
                         val repo = items.getJSONObject(0)
                         learnedText = "Repo GitHub: ${repo.getString("name")} - ${repo.optString("description", "Tidak ada deskripsi")}"
                     }
-                } else if (activeTopic.contains("Umum", ignoreCase = true)) {
-                    val json = JSONObject(bodyString)
-                    learnedText = "Wikipedia (${json.optString("title")}): ${json.optString("extract")}"
                 } else {
                     val json = JSONObject(bodyString)
-                    val query = json.getJSONObject("query")
-                    val search = query.getJSONArray("search")
-                    if (search.length() > 0) {
-                        learnedText = "Wikipedia (${search.getJSONObject(0).getString("title")}): ${search.getJSONObject(0).getString("snippet").replace(Regex("<[^>]*>"), "")}"
-                    }
+                    learnedText = "Wikipedia (${json.optString("title")}): ${json.optString("extract")}"
                 }
             }
 
             if (learnedText.isNotEmpty()) {
+                // Simpan ke database dengan versi dan sumber URL
                 database.appDao().insertMemory(
-                    MemoryEntity(topic = activeTopic, content = learnedText)
+                    MemoryEntity(
+                        versionName = activeVersion, 
+                        sourceUrl = url,
+                        content = learnedText
+                    )
                 )
             }
 
