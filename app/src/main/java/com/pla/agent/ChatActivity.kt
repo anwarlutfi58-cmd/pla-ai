@@ -112,7 +112,6 @@ class ChatActivity : AppCompatActivity() {
 
     private fun updateTopicInfo(topic: String) {
         binding.tvTopicInfo.text = "Topik: $topic"
-        // Avatar otomatis berubah berdasarkan topik, kecuali user set manual
         if (preferences.getAiAvatar() == R.drawable.avatar_umum) {
             when {
                 topic.contains("Coding", ignoreCase = true) -> {
@@ -141,7 +140,6 @@ class ChatActivity : AppCompatActivity() {
             database.appDao().insertChat(ChatHistoryEntity(sender = "User", message = userInput))
         }
 
-        // MENGGUNAKAN NAMA AI KUSTOM
         chatHistory.append("$currentAiName: ")
         binding.tvChatHistory.text = chatHistory.toString()
 
@@ -171,11 +169,12 @@ class ChatActivity : AppCompatActivity() {
                 binding.tvModelInfo.text = "Siap"
                 
                 lifecycleScope.launch {
-                    // SIMPAN DENGAN NAMA AI KUSTOM
                     database.appDao().insertChat(ChatHistoryEntity(sender = currentAiName, message = aiResponse.toString()))
                 }
 
-                voiceEngine.speak(aiResponse.toString(), currentTopic)
+                // CEK APAKAH SUARA DIAKTIFKAN SEBELUM BICARA
+                val isTtsOn = preferences.isTtsEnabled()
+                voiceEngine.speak(aiResponse.toString(), currentTopic, isTtsOn)
             }
         }
     }
