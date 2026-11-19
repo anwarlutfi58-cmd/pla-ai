@@ -74,7 +74,6 @@ class FloatingService : Service() {
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    // Jika pergerakan sangat kecil, anggap sebagai klik
                     if (Math.abs(event.rawX - initialTouchX) < 10 && Math.abs(event.rawY - initialTouchY) < 10) {
                         tampilkanMenuPerintah()
                     }
@@ -91,7 +90,6 @@ class FloatingService : Service() {
             .setView(dialogView)
             .create()
 
-        // Agar dialog muncul di atas aplikasi lain
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             dialog.window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
         } else {
@@ -104,9 +102,12 @@ class FloatingService : Service() {
         btnJalankan.setOnClickListener {
             val command = edtCommand.text.toString()
             if (command.isNotEmpty()) {
-                // Kirim perintah ke ScreenReaderService
-                JarvisBridge.screenReaderService?.executeCommand(command)
-                Toast.makeText(this, "Jarvis sedang memproses...", Toast.LENGTH_SHORT).show()
+                if (JarvisBridge.screenReaderService == null) {
+                    Toast.makeText(this, "Aksesibilitas belum aktif! Buka Pengaturan.", Toast.LENGTH_LONG).show()
+                } else {
+                    JarvisBridge.screenReaderService?.executeCommand(command)
+                    Toast.makeText(this, "Jarvis memproses: $command", Toast.LENGTH_SHORT).show()
+                }
                 dialog.dismiss()
             }
         }
