@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PLA Agent</string>
+    <string-array name="avatar_names">
+        <item>Robot Netral (Umum)</item>
+        <item>Programmer (Coding)</item>
+        <item>Dokter (Kesehatan)</item>
+    </string-array>
+</resources>
