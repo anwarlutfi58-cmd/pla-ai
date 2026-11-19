@@ -13,6 +13,7 @@ class PlAiEngine(
     private var isModelLoaded = false
     private var currentModelName = ""
     private val githubScraper = GitHubScraper()
+    private val preferences = AppPreferences(context)
 
     fun getAvailableModels(): List<File> {
         val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
@@ -52,7 +53,6 @@ class PlAiEngine(
         val activeTopic = appDao.getActiveTopic()?.name ?: "Umum"
         val memories = appDao.getMemoriesByTopic(activeTopic)
         
-        // BELAJAR DIAM-DIAM: Ambil 10 chat terakhir untuk memahami konteks user
         val recentChats = appDao.getRecentChats().reversed()
         val chatContext = if (recentChats.isNotEmpty()) {
             recentChats.joinToString("\n") { "${it.sender}: ${it.message}" }
@@ -72,10 +72,12 @@ class PlAiEngine(
         }
 
         val memoryContext = memories.joinToString("\n") { "Dokumen: ${it.content.take(500)}" }
+        
+        // MENGAMBIL NAMA AI DARI PREFERENSI
+        val aiName = preferences.getAiName()
 
-        // SYSTEM PROMPT DIPERBARUI: Menggunakan Riwayat Chat agar AI paham kebiasaan user
         val systemPrompt = """
-            Anda adalah PLA Agent.
+            Anda adalah $aiName, asisten AI profesional.
             Topik saat ini: $activeTopic.
             
             Riwayat Percakapan Terakhir (Gunakan ini untuk memahami gaya bicara dan keinginan pengguna):
@@ -91,10 +93,10 @@ class PlAiEngine(
         """.trimIndent()
 
         try {
-            var mockResponse = "Halo! Saya PLA Agent (Model: $currentModelName, Topik: $activeTopic).\n"
+            var mockResponse = "Halo! Saya $aiName (Model: $currentModelName, Topik: $activeTopic).\n"
             
             if (recentChats.isNotEmpty()) {
-                mockResponse += "Saya sudah mempelajari riwayat obrolan kita sebelumnya (Total ${recentChats.size} pesan terakhir).\n"
+                mockResponse += "Saya sudah mempelajari riwayat obrolan kita sebelumnya.\n"
             }
 
             if (githubContext.isNotEmpty()) {
