@@ -12,11 +12,17 @@ import com.pla.agent.databinding.ActivitySettingsBinding
 class SettingsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySettingsBinding
+    private lateinit var preferences: AppPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        preferences = (application as AppContainer).preferences
+
+        // Memuat status switch terakhir
+        binding.switchInternet.isChecked = preferences.isInternetEnabled()
 
         binding.btnManageModels.setOnClickListener {
             startActivity(Intent(this, ModelDownloadActivity::class.java))
@@ -46,11 +52,11 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        // LOGIKA BELAJAR 24 JAM
         binding.switchInternet.setOnCheckedChangeListener { _, isChecked ->
+            preferences.setInternetEnabled(isChecked)
             if (isChecked) {
                 LearningScheduler.startLearning(this)
-                Toast.makeText(this, "AI sekarang akan belajar mandiri di latar belakang!", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "AI akan belajar diam-diam saat HP tidak dipakai.", Toast.LENGTH_LONG).show()
             } else {
                 LearningScheduler.stopLearning(this)
                 Toast.makeText(this, "AI berhenti belajar mandiri.", Toast.LENGTH_SHORT).show()
