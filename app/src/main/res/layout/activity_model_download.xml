@@ -1,70 +1,125 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="24dp"
     android:background="#121212">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Pilih Model AI"
-        android:textColor="#FFFFFF"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="24dp" />
-
-    <RadioGroup
-        android:id="@+id/rgModels"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp">
+        android:orientation="vertical"
+        android:padding="24dp">
 
-        <RadioButton
-            android:id="@+id/rbQwen"
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Kelola Model AI"
+            android:textColor="#FFFFFF"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Info Sisa Memori HP -->
+        <TextView
+            android:id="@+id/tvStorageInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sisa Memori: Menghitung..."
+            android:textColor="#4CAF50"
+            android:textSize="14sp"
+            android:layout_marginBottom="24dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Model Terunduh (Pilih untuk dihapus):"
+            android:textColor="#AAAAAA"
+            android:textSize="14sp"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Daftar Model yang sudah diunduh -->
+        <Spinner
+            android:id="@+id/spinnerModels"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:backgroundTint="#FFFFFF"
+            android:layout_marginBottom="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnHapusModel"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="Hapus Model Terpilih"
+            android:backgroundTint="#F44336"
+            app:cornerRadius="12dp"
+            android:layout_marginBottom="32dp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#333333"
+            android:layout_marginBottom="24dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Unduh Model Baru:"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp" />
+
+        <RadioGroup
+            android:id="@+id/rgModels"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Qwen 2.5 1.5B (Bahasa Indonesia - 1.1 GB)"
-            android:textColor="#FFFFFF"
-            android:paddingBottom="16dp" />
+            android:layout_marginBottom="16dp">
 
-        <RadioButton
-            android:id="@+id/rbLlama"
+            <RadioButton
+                android:id="@+id/rbQwen"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Qwen 2.5 1.5B (1.1 GB)"
+                android:textColor="#FFFFFF"
+                android:paddingBottom="8dp" />
+
+            <RadioButton
+                android:id="@+id/rbLlama"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Llama 3.2 1B (800 MB)"
+                android:textColor="#FFFFFF"
+                android:paddingBottom="8dp" />
+
+            <RadioButton
+                android:id="@+id/rbSmol"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="SmolLM2 1.7B (1.0 GB)"
+                android:textColor="#FFFFFF"
+                android:paddingBottom="8dp" />
+
+        </RadioGroup>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDownload"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="Mulai Unduh"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:cornerRadius="12dp"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:id="@+id/txtProgress"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Llama 3.2 1B (Cepat - 800 MB)"
-            android:textColor="#FFFFFF"
-            android:paddingBottom="16dp" />
+            android:text=""
+            android:textColor="#4CAF50"
+            android:textSize="16sp"
+            android:gravity="center" />
 
-        <RadioButton
-            android:id="@+id/rbSmol"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="SmolLM2 1.7B (Ringan - 1.0 GB)"
-            android:textColor="#FFFFFF"
-            android:paddingBottom="16dp" />
-
-    </RadioGroup>
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnDownload"
-        android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:text="Mulai Unduh"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
-        app:cornerRadius="12dp"
-        android:layout_marginBottom="16dp" />
-
-    <TextView
-        android:id="@+id/txtProgress"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text=""
-        android:textColor="#4CAF50"
-        android:textSize="16sp"
-        android:gravity="center" />
-
-</LinearLayout>
+    </LinearLayout>
+</ScrollView>
