@@ -6,14 +6,13 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <!-- Izin baru untuk Foreground Service tipe Special Use (Android 14+) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
 
     <application
         android:name=".AppContainer"
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/ic_launcher"
         android:label="PLA Agent"
         android:supportsRtl="true"
         android:theme="@style/Theme.Material3.DayNight.NoActionBar">
@@ -35,20 +34,17 @@
         <activity android:name=".ModelDownloadActivity" />
         <activity android:name=".HistoryActivity" />
 
-        <!-- Jarvis Melayang -->
         <service
             android:name=".FloatingService"
             android:enabled="true"
             android:exported="false" />
 
-        <!-- Background Service (Menjaga AI tetap hidup) -->
         <service
             android:name=".JarvisBackgroundService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="specialUse" />
             
-        <!-- Layanan Membaca Layar -->
         <service
             android:name=".ScreenReaderService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
