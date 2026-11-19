@@ -44,6 +44,18 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
+        <!-- Tombol Ganti Model -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnGantiModel"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:text="Ganti"
+            android:textSize="12sp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            xmlns:app="http://schemas.android.com/apk/res-auto"
+            app:cornerRadius="8dp" />
+
     </LinearLayout>
 
     <!-- Area Percakapan -->
