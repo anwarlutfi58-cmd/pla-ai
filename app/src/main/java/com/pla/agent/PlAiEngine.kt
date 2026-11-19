@@ -14,24 +14,28 @@ class PlAiEngine(
     private var currentModelName = ""
     private val githubScraper = GitHubScraper()
 
-    fun getAvailableModel(): File? {
+    // Fungsi baru: Mencari semua file .gguf di folder Download
+    fun getAvailableModels(): List<File> {
         val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-        return downloadDir?.listFiles()?.firstOrNull { it.name.endsWith(".gguf") }
+        return downloadDir?.listFiles { file -> file.extension == "gguf" }?.toList() ?: emptyList()
     }
 
-    suspend fun loadModel(onProgress: (String) -> Unit): Boolean = withContext(Dispatchers.IO) {
-        val modelFile = getAvailableModel()
-        if (modelFile == null) {
-            onProgress("Model tidak ditemukan.")
-            return@withContext false
-        }
+    // Fungsi baru: Membongkar model dari RAM sebelum ganti model
+    fun unloadModel() {
+        isModelLoaded = false
+        currentModelName = ""
+        // Di Llama.cpp asli, di sini kita panggil fungsi free/close
+    }
 
-        onProgress("Memuat model ${modelFile.name}...")
+    suspend fun loadModel(modelFile: File, onProgress: (String) -> Unit): Boolean = withContext(Dispatchers.IO) {
+        unloadModel() // Bersihkan RAM dulu
+        
+        onProgress("Memuat ${modelFile.name}...")
         try {
-            Thread.sleep(1500)
+            Thread.sleep(1500) // Simulasi loading C++
             isModelLoaded = true
             currentModelName = modelFile.name
-            onProgress("Model berhasil dimuat!")
+            onProgress("Model siap: ${modelFile.name}")
             return@withContext true
         } catch (e: Exception) {
             onProgress("Gagal memuat: ${e.message}")
@@ -54,7 +58,6 @@ class PlAiEngine(
         
         var githubContext = ""
         
-        // DETEKSI OTOMATIS: Jika topik Coding atau ada kata kunci pemrograman
         val isCodingQuery = activeTopic.contains("Coding", ignoreCase = true) || 
                             userInput.contains("kode", ignoreCase = true) || 
                             userInput.contains("coding", ignoreCase = true) ||
@@ -62,7 +65,6 @@ class PlAiEngine(
 
         if (isCodingQuery) {
             onStatusUpdate("Mencari referensi di GitHub...")
-            // Cari referensi berdasarkan pertanyaan user
             githubContext = githubScraper.cariReferensi(userInput)
         }
 
@@ -71,24 +73,14 @@ class PlAiEngine(
         val systemPrompt = """
             Anda adalah PLA Agent.
             Topik saat ini: $activeTopic.
-            
-            Referensi Memori (ZIP/Dokumen):
-            $memoryContext
-            
-            Referensi GitHub (Real-time):
-            $githubContext
-            
-            Jawablah dengan cerdas, gunakan referensi di atas jika relevan.
+            Referensi Memori: $memoryContext
+            Referensi GitHub: $githubContext
         """.trimIndent()
 
         try {
-            // Simulasi Llama.cpp
-            var mockResponse = "Halo! Saya PLA Agent (Topik: $activeTopic).\n"
-            
+            var mockResponse = "Halo! Saya PLA Agent (Model: $currentModelName, Topik: $activeTopic).\n"
             if (githubContext.isNotEmpty()) {
-                mockResponse += "\nSaya sudah mengecek GitHub untuk Anda. Berikut referensi yang saya temukan:\n$githubContext"
-            } else {
-                mockResponse += "Saya siap membantu Anda."
+                mockResponse += "\nReferensi GitHub:\n$githubContext"
             }
 
             for (char in mockResponse) {
