@@ -29,12 +29,14 @@ class ChatActivity : AppCompatActivity() {
         database = app.database
         voiceEngine = VoiceEngine(this)
 
+        // Muat Topik & Avatar
         lifecycleScope.launch {
             currentTopic = database.appDao().getActiveTopic()?.name ?: "Umum"
             updateAvatarAndTopic(currentTopic)
+            muatRiwayatChat() // Memuat chat sebelumnya
         }
 
-        // Cek model pertama yang tersedia saat layar dibuka
+        // Cek model
         val models = aiEngine.getAvailableModels()
         if (models.isNotEmpty() && !aiEngine.isLoaded()) {
             muatModelSpesifik(models.first())
@@ -43,7 +45,6 @@ class ChatActivity : AppCompatActivity() {
             finish()
         }
 
-        // Tombol Ganti Model
         binding.btnGantiModel.setOnClickListener {
             tampilkanDialogGantiModel()
         }
@@ -54,6 +55,19 @@ class ChatActivity : AppCompatActivity() {
                 binding.edtMessage.setText("")
                 kirimPesan(input)
             }
+        }
+    }
+
+    // FUNGSI BARU: Memuat riwayat chat dari Database saat layar dibuka
+    private fun muatRiwayatChat() {
+        lifecycleScope.launch {
+            val history = database.appDao().getAllChats()
+            chatHistory.clear()
+            for (chat in history) {
+                chatHistory.append("${chat.sender}: ${chat.message}\n\n")
+            }
+            binding.tvChatHistory.text = chatHistory.toString()
+            scrollKeBawah()
         }
     }
 
@@ -112,9 +126,15 @@ class ChatActivity : AppCompatActivity() {
         binding.btnSend.isEnabled = false
         binding.btnGantiModel.isEnabled = false
 
-        chatHistory.append("Anda: $userInput\n\n")
+        // Tampilkan & Simpan Pesan User
+        chatHistory.append("User: $userInput\n\n")
         binding.tvChatHistory.text = chatHistory.toString()
         scrollKeBawah()
+
+        lifecycleScope.launch {
+            // SIMPAN PESAN USER KE DATABASE
+            database.appDao().insertChat(ChatHistoryEntity(sender = "User", message = userInput))
+        }
 
         chatHistory.append("PLA Agent: ")
         binding.tvChatHistory.text = chatHistory.toString()
@@ -144,6 +164,11 @@ class ChatActivity : AppCompatActivity() {
                 binding.btnGantiModel.isEnabled = true
                 binding.tvModelInfo.text = "Siap"
                 
+                // SIMPAN JAWABAN AI KE DATABASE
+                lifecycleScope.launch {
+                    database.appDao().insertChat(ChatHistoryEntity(sender = "PLA Agent", message = aiResponse.toString()))
+                }
+
                 voiceEngine.speak(aiResponse.toString(), currentTopic)
             }
         }
