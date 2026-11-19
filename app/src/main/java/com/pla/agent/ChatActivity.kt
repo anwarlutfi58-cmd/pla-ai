@@ -15,9 +15,11 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var aiEngine: PlAiEngine
     private lateinit var database: AppDatabase
     private lateinit var voiceEngine: VoiceEngine
+    private lateinit var preferences: AppPreferences
     private val chatHistory = StringBuilder()
     private var isGenerating = false
     private var currentTopic = "Umum"
+    private var currentAiName = "PLA Agent"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,15 +30,18 @@ class ChatActivity : AppCompatActivity() {
         aiEngine = app.aiEngine
         database = app.database
         voiceEngine = VoiceEngine(this)
+        preferences = app.preferences
 
-        // Muat Topik & Avatar
+        // Muat Nama dan Avatar Kustom
+        currentAiName = preferences.getAiName()
+        binding.imgAvatar.setImageResource(preferences.getAiAvatar())
+
         lifecycleScope.launch {
             currentTopic = database.appDao().getActiveTopic()?.name ?: "Umum"
-            updateAvatarAndTopic(currentTopic)
-            muatRiwayatChat() // Memuat chat sebelumnya
+            updateTopicInfo(currentTopic)
+            muatRiwayatChat()
         }
 
-        // Cek model
         val models = aiEngine.getAvailableModels()
         if (models.isNotEmpty() && !aiEngine.isLoaded()) {
             muatModelSpesifik(models.first())
@@ -58,7 +63,6 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
-    // FUNGSI BARU: Memuat riwayat chat dari Database saat layar dibuka
     private fun muatRiwayatChat() {
         lifecycleScope.launch {
             val history = database.appDao().getAllChats()
@@ -106,17 +110,20 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateAvatarAndTopic(topic: String) {
+    private fun updateTopicInfo(topic: String) {
         binding.tvTopicInfo.text = "Topik: $topic"
-        when {
-            topic.contains("Coding", ignoreCase = true) -> {
-                binding.imgAvatar.setImageResource(R.drawable.avatar_coding)
-            }
-            topic.contains("Kesehatan", ignoreCase = true) || topic.contains("Psikologi", ignoreCase = true) -> {
-                binding.imgAvatar.setImageResource(R.drawable.avatar_dokter)
-            }
-            else -> {
-                binding.imgAvatar.setImageResource(R.drawable.avatar_umum)
+        // Avatar otomatis berubah berdasarkan topik, kecuali user set manual
+        if (preferences.getAiAvatar() == R.drawable.avatar_umum) {
+            when {
+                topic.contains("Coding", ignoreCase = true) -> {
+                    binding.imgAvatar.setImageResource(R.drawable.avatar_coding)
+                }
+                topic.contains("Kesehatan", ignoreCase = true) || topic.contains("Psikologi", ignoreCase = true) -> {
+                    binding.imgAvatar.setImageResource(R.drawable.avatar_dokter)
+                }
+                else -> {
+                    binding.imgAvatar.setImageResource(R.drawable.avatar_umum)
+                }
             }
         }
     }
@@ -126,17 +133,16 @@ class ChatActivity : AppCompatActivity() {
         binding.btnSend.isEnabled = false
         binding.btnGantiModel.isEnabled = false
 
-        // Tampilkan & Simpan Pesan User
         chatHistory.append("User: $userInput\n\n")
         binding.tvChatHistory.text = chatHistory.toString()
         scrollKeBawah()
 
         lifecycleScope.launch {
-            // SIMPAN PESAN USER KE DATABASE
             database.appDao().insertChat(ChatHistoryEntity(sender = "User", message = userInput))
         }
 
-        chatHistory.append("PLA Agent: ")
+        // MENGGUNAKAN NAMA AI KUSTOM
+        chatHistory.append("$currentAiName: ")
         binding.tvChatHistory.text = chatHistory.toString()
 
         val aiResponse = StringBuilder()
@@ -164,9 +170,9 @@ class ChatActivity : AppCompatActivity() {
                 binding.btnGantiModel.isEnabled = true
                 binding.tvModelInfo.text = "Siap"
                 
-                // SIMPAN JAWABAN AI KE DATABASE
                 lifecycleScope.launch {
-                    database.appDao().insertChat(ChatHistoryEntity(sender = "PLA Agent", message = aiResponse.toString()))
+                    // SIMPAN DENGAN NAMA AI KUSTOM
+                    database.appDao().insertChat(ChatHistoryEntity(sender = currentAiName, message = aiResponse.toString()))
                 }
 
                 voiceEngine.speak(aiResponse.toString(), currentTopic)
