@@ -3,9 +3,15 @@ package com.pla.agent
 import android.app.Application
 
 class AppContainer : Application() {
+
+    // Kita buat satu mesin AI global yang dipakai bersama oleh semua layar
+    lateinit var aiEngine: PlAiEngine
+        private set
+
     override fun onCreate() {
         super.onCreate()
-        // Di sinilah nanti kita akan menginisialisasi Database AI, 
-        // Mesin Llama.cpp, dan pengaturan awal saat aplikasi dibuka.
+        
+        // Inisialisasi mesin AI saat aplikasi pertama kali dibuka
+        aiEngine = PlAiEngine(this)
     }
 }
