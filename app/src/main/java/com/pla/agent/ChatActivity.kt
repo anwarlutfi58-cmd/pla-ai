@@ -1,13 +1,11 @@
 package com.pla.agent
 
-import android.app.AlertDialog
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.pla.agent.databinding.ActivityChatBinding
 import kotlinx.coroutines.launch
-import java.io.File
 
 class ChatActivity : AppCompatActivity() {
 
@@ -32,26 +30,17 @@ class ChatActivity : AppCompatActivity() {
         voiceEngine = VoiceEngine(this)
         preferences = app.preferences
 
-        // Muat Nama dan Avatar Kustom
         currentAiName = preferences.getAiName()
         binding.imgAvatar.setImageResource(preferences.getAiAvatar())
+        
+        // Sembunyikan tombol ganti model karena kita tidak pakai model eksternal lagi
+        binding.btnGantiModel.visibility = android.view.View.GONE
+        binding.tvModelInfo.text = "Independent AI Engine (V1. pla)"
 
         lifecycleScope.launch {
             currentTopic = database.appDao().getActiveTopic()?.name ?: "Umum"
             updateTopicInfo(currentTopic)
             muatRiwayatChat()
-        }
-
-        val models = aiEngine.getAvailableModels()
-        if (models.isNotEmpty() && !aiEngine.isLoaded()) {
-            muatModelSpesifik(models.first())
-        } else if (models.isEmpty()) {
-            Toast.makeText(this, "Tidak ada model. Unduh di Pengaturan!", Toast.LENGTH_LONG).show()
-            finish()
-        }
-
-        binding.btnGantiModel.setOnClickListener {
-            tampilkanDialogGantiModel()
         }
 
         binding.btnSend.setOnClickListener {
@@ -75,41 +64,6 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
-    private fun tampilkanDialogGantiModel() {
-        val models = aiEngine.getAvailableModels()
-        if (models.isEmpty()) {
-            Toast.makeText(this, "Belum ada model yang diunduh.", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val namaModel = models.map { it.name }.toTypedArray()
-
-        AlertDialog.Builder(this)
-            .setTitle("Pilih Model AI")
-            .setItems(namaModel) { _, which ->
-                val fileTerpilih = models[which]
-                muatModelSpesifik(fileTerpilih)
-            }
-            .show()
-    }
-
-    private fun muatModelSpesifik(file: File) {
-        binding.tvModelInfo.text = "Memuat ${file.name}..."
-        binding.btnGantiModel.isEnabled = false
-
-        lifecycleScope.launch {
-            val success = aiEngine.loadModel(file) { progress ->
-                runOnUiThread { binding.tvModelInfo.text = progress }
-            }
-            runOnUiThread {
-                binding.btnGantiModel.isEnabled = true
-                if (!success) {
-                    Toast.makeText(this@ChatActivity, "Gagal memuat model", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
-
     private fun updateTopicInfo(topic: String) {
         binding.tvTopicInfo.text = "Topik: $topic"
         if (preferences.getAiAvatar() == R.drawable.avatar_umum) {
@@ -130,7 +84,6 @@ class ChatActivity : AppCompatActivity() {
     private fun kirimPesan(userInput: String) {
         isGenerating = true
         binding.btnSend.isEnabled = false
-        binding.btnGantiModel.isEnabled = false
 
         chatHistory.append("User: $userInput\n\n")
         binding.tvChatHistory.text = chatHistory.toString()
@@ -139,9 +92,6 @@ class ChatActivity : AppCompatActivity() {
         lifecycleScope.launch {
             database.appDao().insertChat(ChatHistoryEntity(sender = "User", message = userInput))
         }
-
-        chatHistory.append("$currentAiName: ")
-        binding.tvChatHistory.text = chatHistory.toString()
 
         val aiResponse = StringBuilder()
 
@@ -165,14 +115,12 @@ class ChatActivity : AppCompatActivity() {
                 chatHistory.append("\n\n")
                 isGenerating = false
                 binding.btnSend.isEnabled = true
-                binding.btnGantiModel.isEnabled = true
-                binding.tvModelInfo.text = "Siap"
+                binding.tvModelInfo.text = "Independent AI Engine"
                 
                 lifecycleScope.launch {
-                    database.appDao().insertChat(ChatHistoryEntity(sender = currentAiName, message = aiResponse.toString()))
+                    database.appDao().insertChat(ChatHistoryEntity(sender = currentAiName, message = aiResponse.toString().replace("$currentAiName: ", "")))
                 }
 
-                // CEK APAKAH SUARA DIAKTIFKAN SEBELUM BICARA
                 val isTtsOn = preferences.isTtsEnabled()
                 voiceEngine.speak(aiResponse.toString(), currentTopic, isTtsOn)
             }
