@@ -14,7 +14,7 @@ class ZipUploadActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityZipUploadBinding
     private lateinit var zipReader: ZipReader
-    private lateinit var aiEngine: PlAiEngine
+    private lateinit var database: AppDatabase
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -22,7 +22,7 @@ class ZipUploadActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         zipReader = ZipReader(this)
-        aiEngine = PlAiEngine(this) // Gunakan AI untuk menyimpan memori
+        database = (application as AppContainer).database
 
         binding.btnPilihZip.setOnClickListener {
             val intent = Intent(Intent.ACTION_GET_CONTENT)
@@ -43,13 +43,15 @@ class ZipUploadActivity : AppCompatActivity() {
                     
                     if (isiTeks.startsWith("Gagal") || isiTeks.startsWith("File")) {
                         binding.tvStatusZip.text = isiTeks
-                        Toast.makeText(this@ZipUploadActivity, "Gagal memproses file", Toast.LENGTH_LONG).show()
                     } else {
-                        // SIMPAN KE MEMORI AI
-                        aiEngine.simpanMemoriBelajar(isiTeks)
+                        // Simpan ke Database
+                        val activeTopic = database.appDao().getActiveTopic()?.name ?: "Umum"
+                        database.appDao().insertMemory(
+                            MemoryEntity(topic = activeTopic, content = isiTeks)
+                        )
                         
-                        binding.tvStatusZip.text = "Berhasil! AI telah mempelajari dokumen dari ZIP ini."
-                        Toast.makeText(this@ZipUploadActivity, "Materi berhasil diserap AI!", Toast.LENGTH_LONG).show()
+                        binding.tvStatusZip.text = "Berhasil! AI telah mempelajari dokumen ini untuk topik $activeTopic."
+                        Toast.makeText(this@ZipUploadActivity, "Materi disimpan ke Database!", Toast.LENGTH_LONG).show()
                     }
                 }
             }
