@@ -7,13 +7,8 @@ import android.util.Log
 class AppContainer : Application() {
 
     lateinit var aiEngine: PlAiEngine
-        private set
-
     lateinit var database: AppDatabase
-        private set
-
     lateinit var preferences: AppPreferences
-        private set
 
     override fun onCreate() {
         super.onCreate()
