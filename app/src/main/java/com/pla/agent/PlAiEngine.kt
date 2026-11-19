@@ -14,25 +14,21 @@ class PlAiEngine(
     private var currentModelName = ""
     private val githubScraper = GitHubScraper()
 
-    // Fungsi baru: Mencari semua file .gguf di folder Download
     fun getAvailableModels(): List<File> {
         val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
         return downloadDir?.listFiles { file -> file.extension == "gguf" }?.toList() ?: emptyList()
     }
 
-    // Fungsi baru: Membongkar model dari RAM sebelum ganti model
     fun unloadModel() {
         isModelLoaded = false
         currentModelName = ""
-        // Di Llama.cpp asli, di sini kita panggil fungsi free/close
     }
 
     suspend fun loadModel(modelFile: File, onProgress: (String) -> Unit): Boolean = withContext(Dispatchers.IO) {
-        unloadModel() // Bersihkan RAM dulu
-        
+        unloadModel()
         onProgress("Memuat ${modelFile.name}...")
         try {
-            Thread.sleep(1500) // Simulasi loading C++
+            Thread.sleep(1500)
             isModelLoaded = true
             currentModelName = modelFile.name
             onProgress("Model siap: ${modelFile.name}")
@@ -56,8 +52,15 @@ class PlAiEngine(
         val activeTopic = appDao.getActiveTopic()?.name ?: "Umum"
         val memories = appDao.getMemoriesByTopic(activeTopic)
         
+        // BELAJAR DIAM-DIAM: Ambil 10 chat terakhir untuk memahami konteks user
+        val recentChats = appDao.getRecentChats().reversed()
+        val chatContext = if (recentChats.isNotEmpty()) {
+            recentChats.joinToString("\n") { "${it.sender}: ${it.message}" }
+        } else {
+            "Belum ada riwayat percakapan."
+        }
+
         var githubContext = ""
-        
         val isCodingQuery = activeTopic.contains("Coding", ignoreCase = true) || 
                             userInput.contains("kode", ignoreCase = true) || 
                             userInput.contains("coding", ignoreCase = true) ||
@@ -70,15 +73,30 @@ class PlAiEngine(
 
         val memoryContext = memories.joinToString("\n") { "Dokumen: ${it.content.take(500)}" }
 
+        // SYSTEM PROMPT DIPERBARUI: Menggunakan Riwayat Chat agar AI paham kebiasaan user
         val systemPrompt = """
             Anda adalah PLA Agent.
             Topik saat ini: $activeTopic.
-            Referensi Memori: $memoryContext
-            Referensi GitHub: $githubContext
+            
+            Riwayat Percakapan Terakhir (Gunakan ini untuk memahami gaya bicara dan keinginan pengguna):
+            $chatContext
+            
+            Referensi Memori (ZIP/Dokumen):
+            $memoryContext
+            
+            Referensi GitHub (Real-time):
+            $githubContext
+            
+            Jawablah dengan cerdas dan sesuaikan dengan kebiasaan pengguna.
         """.trimIndent()
 
         try {
             var mockResponse = "Halo! Saya PLA Agent (Model: $currentModelName, Topik: $activeTopic).\n"
+            
+            if (recentChats.isNotEmpty()) {
+                mockResponse += "Saya sudah mempelajari riwayat obrolan kita sebelumnya (Total ${recentChats.size} pesan terakhir).\n"
+            }
+
             if (githubContext.isNotEmpty()) {
                 mockResponse += "\nReferensi GitHub:\n$githubContext"
             }
