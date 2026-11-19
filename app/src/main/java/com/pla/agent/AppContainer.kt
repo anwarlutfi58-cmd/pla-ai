@@ -11,9 +11,15 @@ class AppContainer : Application() {
     lateinit var database: AppDatabase
         private set
 
+    lateinit var preferences: AppPreferences
+        private set
+
     override fun onCreate() {
         super.onCreate()
         
+        // Inisialisasi Preferences
+        preferences = AppPreferences(this)
+
         // Inisialisasi Database Room
         database = Room.databaseBuilder(
             applicationContext,
