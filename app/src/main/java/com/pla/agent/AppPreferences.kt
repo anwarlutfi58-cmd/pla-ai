@@ -6,38 +6,29 @@ import android.content.SharedPreferences
 class AppPreferences(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("pla_prefs", Context.MODE_PRIVATE)
 
-    // Fungsi Internet
-    fun setInternetEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean("internet_enabled", enabled).apply()
-    }
-
-    fun isInternetEnabled(): Boolean {
-        return prefs.getBoolean("internet_enabled", false)
-    }
-
-    // Fungsi Nama dan Avatar AI
-    fun setAiName(name: String) {
-        prefs.edit().putString("ai_name", name).apply()
+    companion object {
+        private const val KEY_AI_NAME = "ai_name"
+        private const val DEFAULT_AI_NAME = "PLA Agent"
+        
+        // Kunci Baru untuk Fitur Hardware Trigger
+        private const val KEY_HARDWARE_TRIGGER = "hardware_trigger_enabled"
     }
 
     fun getAiName(): String {
-        return prefs.getString("ai_name", "PLA Agent") ?: "PLA Agent"
+        return prefs.getString(KEY_AI_NAME, DEFAULT_AI_NAME) ?: DEFAULT_AI_NAME
     }
 
-    fun setAiAvatar(avatarId: Int) {
-        prefs.edit().putInt("ai_avatar", avatarId).apply()
+    fun setAiName(name: String) {
+        prefs.edit().putString(KEY_AI_NAME, name).apply()
     }
 
-    fun getAiAvatar(): Int {
-        return prefs.getInt("ai_avatar", R.drawable.avatar_umum)
+    // === METODE BARU UNTUK FITUR HARDWARE TRIGGER ===
+    
+    fun isHardwareTriggerEnabled(): Boolean {
+        return prefs.getBoolean(KEY_HARDWARE_TRIGGER, false)
     }
 
-    // Fungsi Suara (TTS)
-    fun setTtsEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean("tts_enabled", enabled).apply()
-    }
-
-    fun isTtsEnabled(): Boolean {
-        return prefs.getBoolean("tts_enabled", true) // Default: Nyala
+    fun setHardwareTriggerEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_HARDWARE_TRIGGER, enabled).apply()
     }
 }
