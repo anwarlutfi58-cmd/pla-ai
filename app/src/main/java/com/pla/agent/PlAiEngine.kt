@@ -10,13 +10,11 @@ class PlAiEngine(
     private val appDao: AppDao
 ) {
     private val analyzer = LanguageAnalyzer()
+    private val intentClassifier = IntentClassifier()
+    private val composer = NGramComposer(context.filesDir)
     private val preferences = AppPreferences(context)
-    private val composer = MarkovComposer(context.filesDir)
 
-    // Ingatan percakapan jangka pendek (fitur baru)
     private var tokenPercakapanTerakhir: List<String> = emptyList()
-
-    // Cache memori agar JSON tidak diurai ulang tiap pertanyaan (fitur baru)
     private var cacheTanda = ""
     private var cacheMemori: List<MemoriTerurai> = emptyList()
 
@@ -39,30 +37,18 @@ class PlAiEngine(
         val activeVersion = appDao.getActiveVersion()?.versionName ?: "V1. pla"
         val aiName = preferences.getAiName()
 
-        onStatusUpdate("Menganalisis dengan $activeVersion...")
-
+        onStatusUpdate("Menganalisis niat...")
+        val intent = intentClassifier.classify(userInput)
         val lowerInput = userInput.lowercase().trim()
 
-        // ==========================================
-        // 1. SAPAAN & CUSTOM RULES (PONDASI LAMA - TIDAK DIUBAH)
-        // ==========================================
+        // 1. SAPAAN & CUSTOM RULES (PONDASI LAMA)
         val greetingResponse = when {
-            lowerInput == "apa" || lowerInput == "apa?" ->
-                "Assalamualaikum, ada yang bisa saya bantu?"
-            lowerInput.contains("assalamualaikum") || lowerInput.contains("assalamu alaikum") ->
-                "Waalaikumsalam warahmatullahi wabarakatuh. Ada yang bisa saya bantu?"
-            lowerInput == "halo" || lowerInput == "hai" || lowerInput == "hello" ->
-                "Halo! Saya $aiName. Ada yang bisa saya bantu hari ini?"
-            lowerInput.contains("selamat pagi") ->
-                "Selamat pagi! Semoga harimu menyenangkan. Ada yang bisa saya bantu?"
-            lowerInput.contains("selamat siang") ->
-                "Selamat siang! Ada yang bisa saya bantu?"
-            lowerInput.contains("selamat malam") ->
-                "Selamat malam! Ada yang bisa saya bantu?"
-            lowerInput.contains("terima kasih") ->
-                "Sama-sama! Senang bisa membantu Anda."
-            lowerInput.contains("siapa kamu") || lowerInput.contains("siapa nama kamu") ->
-                "Saya $aiName, asisten AI mandiri yang siap membantu Anda belajar."
+            lowerInput == "apa" || lowerInput == "apa?" -> "Assalamualaikum, ada yang bisa saya bantu?"
+            lowerInput.contains("assalamualaikum") || lowerInput.contains("assalamu alaikum") -> "Waalaikumsalam warahmatullahi wabarakatuh. Ada yang bisa saya bantu?"
+            lowerInput == "halo" || lowerInput == "hai" || lowerInput == "hello" -> "Halo! Saya $aiName. Ada yang bisa saya bantu hari ini?"
+            lowerInput.contains("selamat pagi") -> "Selamat pagi! Semoga harimu menyenangkan."
+            lowerInput.contains("terima kasih") || lowerInput.contains("makasih") -> "Sama-sama! Senang bisa membantu Anda."
+            lowerInput.contains("siapa kamu") || lowerInput.contains("siapa nama kamu") -> "Saya $aiName, asisten AI mandiri yang siap membantu Anda belajar."
             else -> null
         }
 
@@ -71,28 +57,23 @@ class PlAiEngine(
             return@withContext
         }
 
-        // ==========================================
-        // 2. ANALISIS INPUT + KONTEKS PERCAKAPAN (FITUR BARU)
-        // ==========================================
+        // 2. ANALISIS INPUT + KONTEKS PERCAKAPAN
         var inputTokens = analyzer.tokenizeStemmed(userInput)
-
-        val kataLanjutan = listOf("lanjutkan", "jelaskan", "detail", "terus", "kenapa", "mengapa", "contoh", "misal", "lagi", "itu", "tadi", "maksud")
-        val adalahLanjutan = inputTokens.size <= 3 && kataLanjutan.any { lowerInput.contains(it) }
-        if (adalahLanjutan && tokenPercakapanTerakhir.isNotEmpty()) {
+        
+        if (intent == UserIntent.CONTINUATION && tokenPercakapanTerakhir.isNotEmpty()) {
             inputTokens = (tokenPercakapanTerakhir + inputTokens).distinct()
             onStatusUpdate("Melanjutkan topik sebelumnya...")
         }
 
         if (inputTokens.isEmpty()) {
-            kirimTeks("Silakan ketik pertanyaan Anda.", onToken)
+            kirimTeks("Silakan ketik pertanyaan yang lebih spesifik.", onToken)
             return@withContext
         }
 
-        // ==========================================
-        // 3. MUAT & URAI MEMORI (dengan cache)
-        // ==========================================
+        // 3. MUAT MEMORI (DENGAN CACHE)
         val memories = appDao.getMemoriesByVersion(activeVersion)
         val tandaCache = "$activeVersion|${memories.size}|${memories.firstOrNull()?.timestamp ?: 0}"
+        
         if (tandaCache != cacheTanda) {
             cacheMemori = memories.mapNotNull { uraiMemori(it.content) }
             cacheTanda = tandaCache
@@ -104,9 +85,7 @@ class PlAiEngine(
             return@withContext
         }
 
-        // ==========================================
-        // 4. SKOR BERBOBOT (FITUR BARU)
-        // ==========================================
+        // 4. HITUNG SKOR BM25
         val df = HashMap<String, Int>()
         for (m in memori) {
             for (t in m.tokenGabungan) df[t] = (df[t] ?: 0) + 1
@@ -119,9 +98,7 @@ class PlAiEngine(
         var top1: MemoriTerurai? = null
         var top2: MemoriTerurai? = null
         var top3: MemoriTerurai? = null
-        var s1 = 0.0
-        var s2 = 0.0
-        var s3 = 0.0
+        var s1 = 0.0; var s2 = 0.0; var s3 = 0.0
 
         for (m in memori) {
             val skor = analyzer.hitungSkorPintar(inputTokens, m.tokenGabungan, m.tokenPertanyaan, idf)
@@ -137,42 +114,47 @@ class PlAiEngine(
             }
         }
 
+        // 5. SUSUN JAWABAN
         val finalResponse: String
-        if (s1 > 0 && top1 != null) {
-            val conf = minOf(97, 30 + (s1 * 8).toInt())
-            onStatusUpdate("Ingatan ditemukan di $activeVersion (keyakinan $conf%)")
+        if (s1 > 0.5 && top1 != null) {
+            val conf = minOf(98, 40 + (s1 * 10).toInt())
+            onStatusUpdate("Data ditemukan (keyakinan $conf%)")
 
-            val pembuka = PEMBUKA[(userInput.hashCode() and Int.MAX_VALUE) % PEMBUKA.size]
+            val pembuka = when (intent) {
+                UserIntent.EXPLANATION_REQUEST -> "Berikut penjelasannya berdasarkan catatan saya: "
+                UserIntent.EXAMPLE_REQUEST -> "Berikut adalah contoh yang saya temukan: "
+                else -> PEMBUKA_ACAK[(userInput.hashCode() and Int.MAX_VALUE) % PEMBUKA_ACAK.size]
+            }
+
             val sb = StringBuilder(pembuka + top1.jawaban.trim())
 
-            val pakai2 = top2 != null && s2 >= s1 * 0.6
-            val pakai3 = top3 != null && s3 >= s1 * 0.6
-            if (pakai2 && top2 != null) sb.append(" Selain itu, ").append(top2.jawaban.trim())
-            if (pakai3 && top3 != null) sb.append(" Terkait hal itu, ").append(top3.jawaban.trim())
+            // Gabungkan dengan data terkait jika skornya mendekati
+            if (top2 != null && s2 >= s1 * 0.65) sb.append(" Selain itu, ").append(top2.jawaban.trim())
+            if (top3 != null && s3 >= s1 * 0.65) sb.append(" Terkait hal itu, ").append(top3.jawaban.trim())
 
+            // Saran pertanyaan lanjutan
             val saran = when {
-                !pakai2 && top2 != null && top2.pertanyaan.isNotBlank() -> top2.pertanyaan
-                !pakai3 && top3 != null && top3.pertanyaan.isNotBlank() -> top3.pertanyaan
+                top2 != null && top2.pertanyaan.isNotBlank() -> top2.pertanyaan
+                top3 != null && top3.pertanyaan.isNotBlank() -> top3.pertanyaan
                 else -> null
             }
-            if (!saran.isNullOrBlank()) {
-                sb.append("\n\nMungkin kamu juga ingin tahu: \"").append(saran).append("\"")
+            if (!saran.isNullOrBlank() && saran != top1.pertanyaan) {
+                sb.append("\n\n💡 Kamu mungkin juga ingin tahu: \"").append(saran).append("\"")
             }
 
             finalResponse = sb.toString()
             tokenPercakapanTerakhir = inputTokens
         } else {
-            // ==========================================
-            // 5. FALLBACK: PERANGKAI KATA MARKOV (FITUR BARU)
-            // ==========================================
-            if (!composer.isSiap()) onStatusUpdate("Belajar pola kata dari datamu...")
+            // 6. FALLBACK: PERANGKAI KATA N-GRAM (Belajar dari datamu)
+            if (!composer.isSiap()) onStatusUpdate("Mempelajari pola kalimat dari datamu...")
             composer.pastikanSiap(tandaCache, memori.map { it.jawaban })
+            
             val rangkaian = composer.rangkai(inputTokens)
             finalResponse = if (rangkaian != null) {
-                onStatusUpdate("Merangkai kata dari pola yang dipelajari...")
-                "Saya belum punya data pasti tentang itu, tapi ini hasil rangkaian saya dari pola kata yang saya pelajari:\n\n$rangkaian\n\n(Kalimat di atas adalah rangkaian pola dari datamu, bukan fakta terverifikasi.)"
+                onStatusUpdate("Merangkai jawaban dari pola yang dipelajari...")
+                "Saya belum punya data pasti tentang itu, tapi ini hasil rangkaian berdasarkan pola kalimat yang sudah saya pelajari dari datamu:\n\n\"$rangkaian\"\n\n*(Catatan: Kalimat di atas adalah hasil rangkaian statistik, bukan fakta terverifikasi.)*"
             } else {
-                "Maaf, saya belum mempelajari hal itu di $activeVersion. Silakan tambahkan link data di Pengaturan."
+                "Maaf, saya belum mempelajari hal itu di $activeVersion. Silakan tambahkan link data di Pengaturan agar saya bisa belajar."
             }
             tokenPercakapanTerakhir = inputTokens
         }
@@ -188,6 +170,7 @@ class PlAiEngine(
             val topik = obj.optString("topik", "")
             val kategori = obj.optString("kategori", "")
             val gabungan = "$pertanyaan $jawaban $topik $kategori"
+            
             if (jawaban.isBlank() && pertanyaan.isBlank()) null
             else MemoriTerurai(
                 pertanyaan = pertanyaan,
@@ -209,16 +192,17 @@ class PlAiEngine(
     private suspend fun kirimTeks(teks: String, onToken: (String) -> Unit) {
         for (char in teks) {
             onToken(char.toString())
-            Thread.sleep(20)
+            Thread.sleep(15) // Kecepatan mengetik yang nyaman
         }
     }
 
     companion object {
-        private val PEMBUKA = listOf(
+        private val PEMBUKA_ACAK = listOf(
             "Berdasarkan catatan saya, ",
             "Menurut data yang sudah saya pelajari, ",
             "Dari hasil belajar saya, ",
-            "Saya menemukan ini di catatan saya: "
+            "Saya menemukan informasi ini: ",
+            "Berikut yang saya tahu tentang hal tersebut: "
         )
     }
 }
