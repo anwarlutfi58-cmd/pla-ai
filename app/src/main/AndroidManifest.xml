@@ -1,14 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Permission Lama (Pondasi) -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    
-    <!-- Permission Baru untuk Fitur Suara & Auto-Type -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -20,7 +17,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
 
-        <!-- Activity Lama (Pondasi - TIDAK DIUBAH) -->
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -35,7 +31,6 @@
         <activity android:name=".ModelDownloadActivity" android:exported="false" />
         <activity android:name=".ZipUploadActivity" android:exported="false" />
 
-        <!-- Service Lama (Pondasi - TIDAK DIUBAH) -->
         <service android:name=".FloatingService" android:exported="false" />
         <service android:name=".JarvisBackgroundService" android:exported="false" />
         <service android:name=".ScreenReaderService"
@@ -49,7 +44,6 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
-        <!-- Service BARU: AutoTyper Accessibility -->
         <service
             android:name=".AutoTyperAccessibility"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
@@ -62,32 +56,14 @@
                 android:resource="@xml/auto_typer_config" />
         </service>
 
-        <!-- Service BARU: Floating Mic Overlay -->
         <service
             android:name=".FloatingMicOverlay"
             android:foregroundServiceType="microphone"
             android:exported="false" />
 
-        <!-- Service BARU: Hardware Trigger (Volume Up Double Tap) -->
         <service
             android:name=".HardwareTriggerService"
             android:foregroundServiceType="specialUse"
-            android:foregroundServiceType="specialUse"
-            android:foregroundServiceType="specialUse"
-            android:foregroundServiceType="specialUse"
-            android:foregroundServiceType="specialUse"
-            android:foregroundServiceType="specialUse"
-            android:foregroundServiceType="specialUse"
-            android:foregroundServiceType="specialUse"
-            android:foregroundServiceType="specialUse"
-            android:foregroundServiceType="specialUse"
-            android:foregroundServiceType="specialUse"
-            android:foregroundServiceType="specialUse"
-            android:foregroundServiceType="specialUse"
-            android:foregroundServiceType="specialUse"
-            android:foregroundServiceType="specialUse"
-            android:foregroundServiceType="specialUse"
-           ......
             android:exported="false" />
 
     </application>
