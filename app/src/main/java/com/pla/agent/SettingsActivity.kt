@@ -25,64 +25,69 @@ class SettingsActivity : AppCompatActivity() {
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val app = application as AppContainer
-        preferences = app.preferences
-        database = app.database
-        dataImporter = DataImporter(database)
+        try {
+            val app = application as AppContainer
+            preferences = app.preferences
+            database = app.database
+            dataImporter = DataImporter(database)
 
-        // Muat Status Switch (Pastikan ID ini ada di activity_settings.xml)
-        binding.switchInternet.isChecked = preferences.isInternetEnabled()
-        binding.switchTts.isChecked = preferences.isTtsEnabled()
+            binding.switchInternet.isChecked = preferences.isInternetEnabled()
+            binding.switchTts.isChecked = preferences.isTtsEnabled()
 
-        muatVersi()
+            muatVersi()
 
-        binding.btnBuatVersiBaru.setOnClickListener {
-            tampilkanDialogBuatVersi()
-        }
-
-        binding.btnSyncKnowledge.setOnClickListener {
-            if (selectedTrainingVersion.isEmpty()) {
-                Toast.makeText(this, "Pilih versi terlebih dahulu!", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            val url = binding.edtGithubRawUrl.text.toString().trim()
-            if (url.isEmpty() || !url.endsWith(".json")) {
-                Toast.makeText(this, "Masukkan link Raw GitHub berakhiran .json", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+            binding.btnBuatVersiBaru.setOnClickListener {
+                tampilkanDialogBuatVersi()
             }
 
-            binding.btnSyncKnowledge.isEnabled = false
-            binding.tvSyncStatus.text = "Menarik data untuk $selectedTrainingVersion..."
-            
-            lifecycleScope.launch {
-                dataImporter.importFromGitHub(url, selectedTrainingVersion) { status ->
-                    runOnUiThread { binding.tvSyncStatus.text = status }
+            binding.btnSyncKnowledge.setOnClickListener {
+                if (selectedTrainingVersion.isEmpty()) {
+                    Toast.makeText(this, "Pilih versi terlebih dahulu!", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
                 }
-                binding.edtGithubRawUrl.setText("")
-                binding.btnSyncKnowledge.isEnabled = true
-                muatDaftarSumber()
+                val url = binding.edtGithubRawUrl.text.toString().trim()
+                if (url.isEmpty() || !url.endsWith(".json")) {
+                    Toast.makeText(this, "Masukkan link Raw GitHub berakhiran .json", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+
+                binding.btnSyncKnowledge.isEnabled = false
+                binding.tvSyncStatus.text = "Menarik data untuk $selectedTrainingVersion..."
+                
+                lifecycleScope.launch {
+                    dataImporter.importFromGitHub(url, selectedTrainingVersion) { status ->
+                        runOnUiThread { binding.tvSyncStatus.text = status }
+                    }
+                    binding.edtGithubRawUrl.setText("")
+                    binding.btnSyncKnowledge.isEnabled = true
+                    muatDaftarSumber()
+                }
             }
-        }
 
-        binding.btnTopics.setOnClickListener {
-            startActivity(Intent(this, TopicsActivity::class.java))
-        }
+            binding.btnTopics.setOnClickListener {
+                startActivity(Intent(this, TopicsActivity::class.java))
+            }
 
-        binding.btnBackSettings.setOnClickListener {
+            binding.btnBackSettings.setOnClickListener {
+                finish()
+            }
+
+            binding.switchInternet.setOnCheckedChangeListener { _, isChecked ->
+                preferences.setInternetEnabled(isChecked)
+                if (isChecked) {
+                    LearningScheduler.startLearning(this)
+                } else {
+                    LearningScheduler.stopLearning(this)
+                }
+            }
+
+            binding.switchTts.setOnCheckedChangeListener { _, isChecked ->
+                preferences.setTtsEnabled(isChecked)
+            }
+
+        } catch (e: Exception) {
+            Toast.makeText(this, "Terjadi kesalahan sistem: ${e.message}", Toast.LENGTH_LONG).show()
             finish()
-        }
-
-        binding.switchInternet.setOnCheckedChangeListener { _, isChecked ->
-            preferences.setInternetEnabled(isChecked)
-            if (isChecked) {
-                LearningScheduler.startLearning(this)
-            } else {
-                LearningScheduler.stopLearning(this)
-            }
-        }
-
-        binding.switchTts.setOnCheckedChangeListener { _, isChecked ->
-            preferences.setTtsEnabled(isChecked)
         }
     }
 
@@ -90,7 +95,6 @@ class SettingsActivity : AppCompatActivity() {
         lifecycleScope.launch {
             var versions = database.appDao().getAllVersions()
             
-            // Jika belum ada versi, buat V1 otomatis
             if (versions.isEmpty()) {
                 database.appDao().insertVersion(VersionEntity(versionName = "V1. pla", isActiveForChat = true))
                 versions = database.appDao().getAllVersions()
