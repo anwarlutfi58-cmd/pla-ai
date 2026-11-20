@@ -12,33 +12,37 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        
+        try {
+            binding = ActivityMainBinding.inflate(layoutInflater)
+            setContentView(binding.root)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Gagal memuat tampilan: ${e.message}", Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
 
-        // Tombol Mulai Percakapan
         binding.btnChat.setOnClickListener {
             try {
                 startActivity(Intent(this, ChatActivity::class.java))
             } catch (e: Exception) {
-                Toast.makeText(this, "Gagal membuka Chat: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Error Chat: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // Tombol Riwayat
         binding.btnHistory.setOnClickListener {
             try {
                 startActivity(Intent(this, HistoryActivity::class.java))
             } catch (e: Exception) {
-                Toast.makeText(this, "Gagal membuka Riwayat: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Error Riwayat: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // Tombol Pengaturan
         binding.btnSettings.setOnClickListener {
             try {
                 startActivity(Intent(this, SettingsActivity::class.java))
             } catch (e: Exception) {
-                Toast.makeText(this, "Gagal membuka Pengaturan: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Error Pengaturan: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
