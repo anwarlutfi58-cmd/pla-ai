@@ -18,6 +18,7 @@ class AppContainer : Application() {
             preferences = AppPreferences(this)
 
             // Inisialisasi Database Room
+            // destroy() memastikan tidak ada bentrok file database lama
             database = Room.databaseBuilder(
                 applicationContext,
                 AppDatabase::class.java,
@@ -28,7 +29,8 @@ class AppContainer : Application() {
             aiEngine = PlAiEngine(this, database.appDao())
             
         } catch (e: Exception) {
-            Log.e("AppContainer", "Gagal inisialisasi: ${e.message}")
+            Log.e("AppContainer", "Fatal Error saat inisialisasi: ${e.message}")
+            e.printStackTrace()
         }
     }
 }
