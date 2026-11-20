@@ -83,7 +83,7 @@ class PlAiEngine(
         if (!synonymBuilt) {
             onStatusUpdate("Membangun thesaurus dari datamu...")
             queryExpander.loadFromDisk()
-            if (!queryExpander.isBuilt()) {
+            if (!queryExpander.isBuilt) {
                 queryExpander.buildFromMemories(cacheMemori.map { it.rawContent })
             }
             synonymBuilt = true
@@ -114,7 +114,7 @@ class PlAiEngine(
             // Bangun Knowledge Graph secara inkremental hanya saat data berubah
             onStatusUpdate("Memperbarui graf pengetahuan...")
             knowledgeGraph.loadFromDisk()
-            if (!knowledgeGraph.isBuilt()) {
+            if (!knowledgeGraph.isBuilt) {
                 knowledgeGraph.buildFromMemories(cacheMemori.map { it.rawContent })
             }
             graphBuilt = true
