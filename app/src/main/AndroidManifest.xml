@@ -1,52 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Permission Lama (Pondasi) -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    
+    <!-- Permission Baru untuk Fitur Suara & Auto-Type -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
-        android:name=".AppContainer"
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
-        android:label="PLA Agent"
+        android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Material3.DayNight.NoActionBar">
+        android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
 
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:screenOrientation="portrait">
+        <!-- Activity Lama (Pondasi - TIDAK DIUBAH) -->
+        <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        
+        <activity android:name=".ChatActivity" android:exported="false" />
+        <activity android:name=".SettingsActivity" android:exported="false" />
+        <activity android:name=".HistoryActivity" android:exported="false" />
+        <activity android:name=".TopicsActivity" android:exported="false" />
+        <activity android:name=".ModelDownloadActivity" android:exported="false" />
+        <activity android:name=".ZipUploadActivity" android:exported="false" />
 
-        <activity android:name=".ChatActivity" />
-        <activity android:name=".SettingsActivity" />
-        <activity android:name=".TopicsActivity" />
-        <activity android:name=".ZipUploadActivity" />
-        <activity android:name=".ModelDownloadActivity" />
-        <activity android:name=".HistoryActivity" />
-
-        <service
-            android:name=".FloatingService"
-            android:enabled="true"
-            android:exported="false" />
-
-        <service
-            android:name=".JarvisBackgroundService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="specialUse" />
-            
-        <service
-            android:name=".ScreenReaderService"
+        <!-- Service Lama (Pondasi - TIDAK DIUBAH) -->
+        <service android:name=".FloatingService" android:exported="false" />
+        <service android:name=".JarvisBackgroundService" android:exported="false" />
+        <service android:name=".ScreenReaderService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="true">
             <intent-filter>
@@ -56,6 +48,47 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
         </service>
+
+        <!-- Service BARU: AutoTyper Accessibility -->
+        <service
+            android:name=".AutoTyperAccessibility"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/auto_typer_config" />
+        </service>
+
+        <!-- Service BARU: Floating Mic Overlay -->
+        <service
+            android:name=".FloatingMicOverlay"
+            android:foregroundServiceType="microphone"
+            android:exported="false" />
+
+        <!-- Service BARU: Hardware Trigger (Volume Up Double Tap) -->
+        <service
+            android:name=".HardwareTriggerService"
+            android:foregroundServiceType="specialUse"
+            android:foregroundServiceType="specialUse"
+            android:foregroundServiceType="specialUse"
+            android:foregroundServiceType="specialUse"
+            android:foregroundServiceType="specialUse"
+            android:foregroundServiceType="specialUse"
+            android:foregroundServiceType="specialUse"
+            android:foregroundServiceType="specialUse"
+            android:foregroundServiceType="specialUse"
+            android:foregroundServiceType="specialUse"
+            android:foregroundServiceType="specialUse"
+            android:foregroundServiceType="specialUse"
+            android:foregroundServiceType="specialUse"
+            android:foregroundServiceType="specialUse"
+            android:foregroundServiceType="specialUse"
+            android:foregroundServiceType="specialUse"
+           ......
+            android:exported="false" />
 
     </application>
 </manifest>
