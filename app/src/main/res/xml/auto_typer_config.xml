@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PLA Agent</string>
+    
+    <!-- String Lama (Pondasi) -->
+    <string name="accessibility_service_description">PLA Agent Screen Reader untuk membaca layar dan membantu interaksi otomatis.</string>
+    
+    <!-- String Baru untuk AutoTyper -->
+    <string name="accessibility_auto_typer_desc">PLA Agent AutoTyper: Mengizinkan PLA Agent mengetik teks hasil suara ke kolom input aktif di aplikasi lain secara otomatis. Diperlukan untuk fitur perintah suara latar belakang.</string>
+</resources>
