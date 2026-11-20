@@ -2,48 +2,39 @@ package com.pla.agent
 
 class LanguageAnalyzer {
 
-    // Kata yang diabaikan agar AI fokus pada kata penting
     private val stopwords = setOf(
         "yang", "di", "ke", "dari", "untuk", "pada", "adalah", "itu", "ini",
         "saya", "kamu", "aku", "anda", "apa", "tolong", "bisa", "ada", "dan",
         "atau", "dengan", "dalam", "akan", "mau", "ingin", "kah", "lah", "pun",
-        "nya", "sih", "dong", "ya", "the", "a", "an", "of", "to", "in", "is"
+        "nya", "sih", "dong", "ya", "the", "a", "an", "of", "to", "in", "is", "dan"
     )
 
-    // FUNGSI LAMA (pondasi) - diperbaiki pemisah katanya
     fun tokenize(text: String): List<String> {
         val cleanText = text.lowercase().replace(Regex("[^a-z0-9\\s]"), " ")
-        return cleanText.split(Regex("\\s+"))
-            .filter { it.isNotEmpty() && !stopwords.contains(it) }
+        return cleanText.split(Regex("\\s+")).filter { it.isNotEmpty() && !stopwords.contains(it) }
     }
 
-    // FUNGSI LAMA (pondasi) - tetap ada agar file lain tidak error
-    fun hitungSkorKecocokan(inputTokens: List<String>, memoryText: String): Int {
-        val memoryTokens = tokenize(memoryText)
-        var skor = 0
-        for (token in inputTokens) {
-            if (memoryTokens.contains(token)) skor++
-        }
-        return skor
-    }
-
-    // ===== FITUR BARU: Stemmer Bahasa Indonesia sederhana =====
+    // Stemmer Bahasa Indonesia Sederhana (Menghapus imbuhan umum)
     fun stem(kata: String): String {
         var w = kata.lowercase()
         if (w.length <= 3) return w
-        for (s in listOf("kannya", "nya", "kan", "an", "i")) {
+        
+        // Hapus sufiks
+        for (s in listOf("kannya", "nya", "kan", "an", "i", "lah", "kah", "pun")) {
             if (w.endsWith(s) && w.length - s.length >= 3) {
                 w = w.dropLast(s.length)
                 break
             }
         }
+        
+        // Hapus prefiks (maksimal 3 kali iterasi untuk kata seperti "memperlihatkan")
         var ulang = 0
         while (ulang < 3) {
             val sebelum = w
             for (p in listOf(
-                "meng", "meny", "men", "mem", "me",
+                "memper", "mempen", "mempe", "mem", "meny", "men", "me",
                 "peng", "peny", "pen", "pem", "pel", "per", "pe",
-                "ter", "ber", "bel", "be", "di", "ke", "se"
+                "ber", "ter", "di", "ke", "se"
             )) {
                 if (w.startsWith(p) && w.length - p.length >= 3) {
                     w = w.substring(p.length)
@@ -56,19 +47,20 @@ class LanguageAnalyzer {
         return w
     }
 
-    fun tokenizeStemmed(text: String): List<String> = tokenize(text).map { stem(it) }
+    fun tokenizeStemmed(text: String): List<String> = tokenize(text).map { stem(it) }.filter { it.length > 1 }
 
-    // ===== FITUR BARU: Skor berbobot (kata langka = bobot besar, cocok pertanyaan = bonus) =====
+    // Algoritma Skor BM25-lite (Kata langka bernilai lebih tinggi, cocok di pertanyaan = bonus)
     fun hitungSkorPintar(
         inputTokens: List<String>,
-        memoryTokens: Set<String>,
+        docTokens: Set<String>,
         questionTokens: Set<String>,
         idf: Map<String, Double>
     ): Double {
         var skor = 0.0
         for (t in inputTokens) {
-            if (memoryTokens.contains(t)) skor += (idf[t] ?: 1.0)
-            if (questionTokens.contains(t)) skor += (idf[t] ?: 1.0) * 1.5
+            val bobot = idf[t] ?: 0.5
+            if (docTokens.contains(t)) skor += bobot
+            if (questionTokens.contains(t)) skor += bobot * 1.5 // Bonus besar jika cocok dengan kolom pertanyaan
         }
         return skor
     }
