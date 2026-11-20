@@ -10,19 +10,28 @@ class PlAiEngine(
     private val appDao: AppDao
 ) {
     private val analyzer = LanguageAnalyzer()
-    private val intentClassifier = IntentClassifier()
+    private val fuzzyMatcher = FuzzyMatcher
+    private val queryExpander = QueryExpander(context)
+    private val knowledgeGraph = KnowledgeGraph(context)
+    private val confidenceScorer = ConfidenceScorer
+    private val reranker = ResponseReranker
+    private val templateEngine = TemplateEngine
+    private val contextMemory = ContextMemory(context)
     private val composer = NGramComposer(context.filesDir)
     private val preferences = AppPreferences(context)
+    private val intentClassifier = IntentClassifier()
 
-    private var tokenPercakapanTerakhir: List<String> = emptyList()
     private var cacheTanda = ""
     private var cacheMemori: List<MemoriTerurai> = emptyList()
+    private var synonymBuilt = false
+    private var graphBuilt = false
 
     private data class MemoriTerurai(
         val pertanyaan: String,
         val jawaban: String,
         val tokenGabungan: Set<String>,
-        val tokenPertanyaan: Set<String>
+        val tokenPertanyaan: Set<String>,
+        val rawContent: String
     )
 
     fun isLoaded(): Boolean = true
@@ -37,11 +46,12 @@ class PlAiEngine(
         val activeVersion = appDao.getActiveVersion()?.versionName ?: "V1. pla"
         val aiName = preferences.getAiName()
 
-        onStatusUpdate("Menganalisis niat...")
+        // 1. KLASIFIKASI NIAT & MUAT INGATAN PERCAKAPAN
         val intent = intentClassifier.classify(userInput)
         val lowerInput = userInput.lowercase().trim()
+        val isContinuation = contextMemory.isLikelyContinuation(intent)
 
-        // 1. SAPAAN & CUSTOM RULES (PONDASI LAMA)
+        // 2. SAPAAN & CUSTOM RULES (PONDASI LAMA - TETAP DIPERTAHANKAN)
         val greetingResponse = when {
             lowerInput == "apa" || lowerInput == "apa?" -> "Assalamualaikum, ada yang bisa saya bantu?"
             lowerInput.contains("assalamualaikum") || lowerInput.contains("assalamu alaikum") -> "Waalaikumsalam warahmatullahi wabarakatuh. Ada yang bisa saya bantu?"
@@ -57,109 +67,171 @@ class PlAiEngine(
             return@withContext
         }
 
-        // 2. ANALISIS INPUT + KONTEKS PERCAKAPAN
+        // 3. TOKENIZE + FUZZY CORRECTION + QUERY EXPANSION
         var inputTokens = analyzer.tokenizeStemmed(userInput)
         
-        if (intent == UserIntent.CONTINUATION && tokenPercakapanTerakhir.isNotEmpty()) {
-            inputTokens = (tokenPercakapanTerakhir + inputTokens).distinct()
+        // Koreksi typo menggunakan FuzzyMatcher terhadap kosakata di dataset
+        val allKnownWords = cacheMemori.flatMap { 
+            it.tokenGabungan.toList() + it.tokenPertanyaan.toList() 
+        }.distinct()
+        
+        inputTokens = inputTokens.map { token ->
+            fuzzyMatcher.findClosestMatch(token, allKnownWords, threshold = 2) ?: token
+        }
+
+        // Perluas query dengan sinonim otomatis (hanya jika belum dibangun)
+        if (!synonymBuilt) {
+            onStatusUpdate("Membangun thesaurus dari datamu...")
+            queryExpander.loadFromDisk()
+            if (!queryExpander.isBuilt()) {
+                queryExpander.buildFromMemories(cacheMemori.map { it.rawContent })
+            }
+            synonymBuilt = true
+        }
+        val expandedTokens = queryExpander.expandQuery(inputTokens).toList()
+
+        // Gabungkan dengan ingatan percakapan jika lanjutan
+        var finalTokens = expandedTokens.toMutableSet()
+        if (isContinuation) {
+            val contextTokens = contextMemory.getRelevantTokens()
+            finalTokens.addAll(contextTokens)
             onStatusUpdate("Melanjutkan topik sebelumnya...")
         }
 
-        if (inputTokens.isEmpty()) {
+        if (finalTokens.isEmpty()) {
             kirimTeks("Silakan ketik pertanyaan yang lebih spesifik.", onToken)
             return@withContext
         }
 
-        // 3. MUAT MEMORI (DENGAN CACHE)
+        // 4. MUAT MEMORI DENGAN INCREMENTAL INDEX (FITUR #8)
         val memories = appDao.getMemoriesByVersion(activeVersion)
         val tandaCache = "$activeVersion|${memories.size}|${memories.firstOrNull()?.timestamp ?: 0}"
         
         if (tandaCache != cacheTanda) {
             cacheMemori = memories.mapNotNull { uraiMemori(it.content) }
             cacheTanda = tandaCache
+            
+            // Bangun Knowledge Graph secara inkremental hanya saat data berubah
+            onStatusUpdate("Memperbarui graf pengetahuan...")
+            knowledgeGraph.loadFromDisk()
+            if (!knowledgeGraph.isBuilt()) {
+                knowledgeGraph.buildFromMemories(cacheMemori.map { it.rawContent })
+            }
+            graphBuilt = true
+            
+            // Reset composer agar belajar ulang dari data baru
+            composer.pastikanSiap(tandaCache, cacheMemori.map { it.jawaban })
         }
-        val memori = cacheMemori
 
-        if (memori.isEmpty()) {
+        if (cacheMemori.isEmpty()) {
             kirimTeks("Saya belum memiliki data di $activeVersion. Silakan tambahkan link data di Pengaturan.", onToken)
             return@withContext
         }
 
-        // 4. HITUNG SKOR BM25
+        // 5. HITUNG SKOR BM25 + CONFIDENCE SCORING
         val df = HashMap<String, Int>()
-        for (m in memori) {
+        for (m in cacheMemori) {
             for (t in m.tokenGabungan) df[t] = (df[t] ?: 0) + 1
         }
         val idf = HashMap<String, Double>()
         for ((kata, jumlah) in df) {
-            idf[kata] = Math.log(1.0 + memori.size.toDouble() / jumlah.toDouble())
+            idf[kata] = Math.log(1.0 + cacheMemori.size.toDouble() / jumlah.toDouble())
         }
 
-        var top1: MemoriTerurai? = null
-        var top2: MemoriTerurai? = null
-        var top3: MemoriTerurai? = null
-        var s1 = 0.0; var s2 = 0.0; var s3 = 0.0
-
-        for (m in memori) {
-            val skor = analyzer.hitungSkorPintar(inputTokens, m.tokenGabungan, m.tokenPertanyaan, idf)
-            if (skor > s1) {
-                s3 = s2; top3 = top2
-                s2 = s1; top2 = top1
-                s1 = skor; top1 = m
-            } else if (skor > s2) {
-                s3 = s2; top3 = top2
-                s2 = skor; top2 = m
-            } else if (skor > s3) {
-                s3 = skor; top3 = m
-            }
-        }
-
-        // 5. SUSUN JAWABAN
-        val finalResponse: String
-        if (s1 > 0.5 && top1 != null) {
-            val conf = minOf(98, 40 + (s1 * 10).toInt())
-            onStatusUpdate("Data ditemukan (keyakinan $conf%)")
-
-            val pembuka = when (intent) {
-                UserIntent.EXPLANATION_REQUEST -> "Berikut penjelasannya berdasarkan catatan saya: "
-                UserIntent.EXAMPLE_REQUEST -> "Berikut adalah contoh yang saya temukan: "
-                else -> PEMBUKA_ACAK[(userInput.hashCode() and Int.MAX_VALUE) % PEMBUKA_ACAK.size]
-            }
-
-            val sb = StringBuilder(pembuka + top1.jawaban.trim())
-
-            // Gabungkan dengan data terkait jika skornya mendekati
-            if (top2 != null && s2 >= s1 * 0.65) sb.append(" Selain itu, ").append(top2.jawaban.trim())
-            if (top3 != null && s3 >= s1 * 0.65) sb.append(" Terkait hal itu, ").append(top3.jawaban.trim())
-
-            // Saran pertanyaan lanjutan
-            val saran = when {
-                top2 != null && top2.pertanyaan.isNotBlank() -> top2.pertanyaan
-                top3 != null && top3.pertanyaan.isNotBlank() -> top3.pertanyaan
-                else -> null
-            }
-            if (!saran.isNullOrBlank() && saran != top1.pertanyaan) {
-                sb.append("\n\n💡 Kamu mungkin juga ingin tahu: \"").append(saran).append("\"")
-            }
-
-            finalResponse = sb.toString()
-            tokenPercakapanTerakhir = inputTokens
-        } else {
-            // 6. FALLBACK: PERANGKAI KATA N-GRAM (Belajar dari datamu)
-            if (!composer.isSiap()) onStatusUpdate("Mempelajari pola kalimat dari datamu...")
-            composer.pastikanSiap(tandaCache, memori.map { it.jawaban })
+        val candidates = mutableListOf<RankedMemory>()
+        for (m in cacheMemori) {
+            val bm25Score = analyzer.hitungSkorPintar(
+                finalTokens.toList(), 
+                m.tokenGabungan, 
+                m.tokenPertanyaan, 
+                idf
+            )
             
-            val rangkaian = composer.rangkai(inputTokens)
+            val hasQuestionMatch = m.tokenPertanyaan.any { it in finalTokens }
+            val confidence = confidenceScorer.calculate(
+                bm25Score = bm25Score,
+                totalMemories = cacheMemori.size,
+                matchedTokens = finalTokens.count { it in m.tokenGabungan },
+                totalQueryTokens = finalTokens.size,
+                hasQuestionMatch = hasQuestionMatch
+            )
+            
+            // Hanya masukkan kandidat dengan keyakinan minimal MEDIUM
+            if (confidence.level != ConfidenceLevel.NONE) {
+                candidates.add(RankedMemory(m.jawaban, confidence.score, m.tokenGabungan))
+            }
+        }
+
+        // 6. RERANKING UNTUK DIVERSITAS
+        val topCandidates = reranker.rerank(candidates, lambda = 0.7, topK = 3)
+
+        // 7. SUSUN JAWABAN FINAL
+        val finalResponse: String
+        
+        if (topCandidates.isNotEmpty()) {
+            val bestConfidence = confidenceScorer.calculate(
+                bm25Score = topCandidates.first().score,
+                totalMemories = cacheMemori.size,
+                matchedTokens = finalTokens.count { it in cacheMemori.first().tokenGabungan },
+                totalQueryTokens = finalTokens.size,
+                hasQuestionMatch = cacheMemori.first().tokenPertanyaan.any { it in finalTokens }
+            )
+            
+            val opening = templateEngine.getOpening(
+                intent = intent,
+                confidence = bestConfidence.level,
+                sourceCount = topCandidates.size,
+                isContinuation = isContinuation
+            )
+            
+            val sb = StringBuilder(opening)
+            sb.append(topCandidates.first().content.trim())
+            
+            // Tambahkan sumber kedua & ketiga jika beragam
+            for (i in 1 until topCandidates.size) {
+                sb.append(" Selain itu, ").append(topCandidates[i].content.trim())
+            }
+            
+            // Saran pertanyaan terkait dari Knowledge Graph
+            val suggestions = getSuggestions(finalTokens)
+            if (suggestions.isNotEmpty()) {
+                sb.append("\n\n💡 Kamu mungkin juga ingin tahu: \"").append(suggestions.random()).append("\"")
+            }
+            
+            finalResponse = sb.toString()
+            
+            // Simpan ke ingatan percakapan
+            contextMemory.add(finalTokens.toList(), intent)
+            
+        } else {
+            // FALLBACK: N-GRAM COMPOSER
+            if (!composer.isSiap()) onStatusUpdate("Mempelajari pola kalimat...")
+            composer.pastikanSiap(tandaCache, cacheMemori.map { it.jawaban })
+            
+            val rangkaian = composer.rangkai(finalTokens.toList())
             finalResponse = if (rangkaian != null) {
-                onStatusUpdate("Merangkai jawaban dari pola yang dipelajari...")
-                "Saya belum punya data pasti tentang itu, tapi ini hasil rangkaian berdasarkan pola kalimat yang sudah saya pelajari dari datamu:\n\n\"$rangkaian\"\n\n*(Catatan: Kalimat di atas adalah hasil rangkaian statistik, bukan fakta terverifikasi.)*"
+                onStatusUpdate("Merangkai dari pola yang dipelajari...")
+                "Saya belum punya data pasti tentang itu, tapi ini hasil rangkaian berdasarkan pola dari datamu:\n\n\"$rangkaian\"\n\n*(Catatan: Kalimat di atas adalah hasil rangkaian statistik, bukan fakta terverifikasi.)*"
             } else {
                 "Maaf, saya belum mempelajari hal itu di $activeVersion. Silakan tambahkan link data di Pengaturan agar saya bisa belajar."
             }
-            tokenPercakapanTerakhir = inputTokens
+            contextMemory.add(finalTokens.toList(), intent)
         }
 
         kirimTeks(finalResponse, onToken)
+    }
+
+    private fun getSuggestions(tokens: Set<String>): List<String> {
+        val suggestions = mutableListOf<String>()
+        for (token in tokens.take(3)) {
+            val connected = knowledgeGraph.getConnectedNodes(token)
+            for ((rel, nodes) in connected) {
+                for (node in nodes.take(2)) {
+                    suggestions.add("$token $rel $node")
+                }
+            }
+        }
+        return suggestions.distinct().take(3)
     }
 
     private fun uraiMemori(content: String): MemoriTerurai? {
@@ -176,7 +248,8 @@ class PlAiEngine(
                 pertanyaan = pertanyaan,
                 jawaban = if (jawaban.isNotBlank()) jawaban else gabungan,
                 tokenGabungan = analyzer.tokenizeStemmed(gabungan).toSet(),
-                tokenPertanyaan = analyzer.tokenizeStemmed(pertanyaan).toSet()
+                tokenPertanyaan = analyzer.tokenizeStemmed(pertanyaan).toSet(),
+                rawContent = content
             )
         } catch (e: Exception) {
             if (content.isBlank()) null
@@ -184,7 +257,8 @@ class PlAiEngine(
                 pertanyaan = "",
                 jawaban = content,
                 tokenGabungan = analyzer.tokenizeStemmed(content).toSet(),
-                tokenPertanyaan = emptySet()
+                tokenPertanyaan = emptySet(),
+                rawContent = content
             )
         }
     }
@@ -192,17 +266,7 @@ class PlAiEngine(
     private suspend fun kirimTeks(teks: String, onToken: (String) -> Unit) {
         for (char in teks) {
             onToken(char.toString())
-            Thread.sleep(15) // Kecepatan mengetik yang nyaman
+            Thread.sleep(15)
         }
-    }
-
-    companion object {
-        private val PEMBUKA_ACAK = listOf(
-            "Berdasarkan catatan saya, ",
-            "Menurut data yang sudah saya pelajari, ",
-            "Dari hasil belajar saya, ",
-            "Saya menemukan informasi ini: ",
-            "Berikut yang saya tahu tentang hal tersebut: "
-        )
     }
 }
