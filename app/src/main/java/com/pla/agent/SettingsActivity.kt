@@ -9,20 +9,24 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 
 class SettingsActivity : AppCompatActivity() {
 
     private lateinit var preferences: AppPreferences
+    private var accessStatusView: TextView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        preferences = AppPreferences(this)
         
-        // Layout programmatic sederhana (tanpa XML baru)
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(48, 48, 48, 48)
@@ -43,7 +47,7 @@ class SettingsActivity : AppCompatActivity() {
         }
         layout.addView(aiNameLabel)
 
-        val aiNameInput = android.widget.EditText(this).apply {
+        val aiNameInput = EditText(this).apply {
             setText(preferences.getAiName())
             hint = "Masukkan nama AI"
         }
@@ -89,11 +93,18 @@ class SettingsActivity : AppCompatActivity() {
             text = "Aktifkan Pemicu Tombol Volume"
             isChecked = preferences.isHardwareTriggerEnabled()
             setOnCheckedChangeListener { _, isChecked ->
-                preferences.setHardwareTriggerEnabled(isChecked)
                 if (isChecked) {
+                    // Cek permission dulu sebelum aktifkan
+                    if (!hasAllPermissions()) {
+                        isChecked = false
+                        requestMissingPermissions()
+                        return@setOnCheckedChangeListener
+                    }
+                    preferences.setHardwareTriggerEnabled(true)
                     HardwareTriggerService.start(this@SettingsActivity)
                     Toast.makeText(this@SettingsActivity, "Fitur aktif! Ketuk Volume Up 2x.", Toast.LENGTH_LONG).show()
                 } else {
+                    preferences.setHardwareTriggerEnabled(false)
                     HardwareTriggerService.stop(this@SettingsActivity)
                     Toast.makeText(this@SettingsActivity, "Fitur dimatikan.", Toast.LENGTH_SHORT).show()
                 }
@@ -102,16 +113,12 @@ class SettingsActivity : AppCompatActivity() {
         layout.addView(hardwareSwitch)
 
         // Status Accessibility
-        val accessStatus = TextView(this).apply {
-            text = if (isAccessibilityEnabled()) 
-                "✅ AutoTyper AKTIF - Siap mengetik otomatis" 
-            else 
-                "❌ AutoTyper BELUM AKTIF - Klik tombol di bawah untuk mengaktifkan"
+        accessStatusView = TextView(this).apply {
             textSize = 14f
             setPadding(0, 16, 0, 8)
-            setTextColor(if (isAccessibilityEnabled()) 0xFF4CAF50.toInt() else 0xFFF44336.toInt())
         }
-        layout.addView(accessStatus)
+        updateAccessStatus()
+        layout.addView(accessStatusView)
 
         val enableAccessBtn = Button(this).apply {
             text = "Buka Pengaturan Accessibility"
@@ -142,6 +149,16 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(layout)
     }
 
+    private fun updateAccessStatus() {
+        accessStatusView?.apply {
+            text = if (isAccessibilityEnabled()) 
+                "✅ AutoTyper AKTIF - Siap mengetik otomatis" 
+            else 
+                "❌ AutoTyper BELUM AKTIF - Klik tombol di bawah untuk mengaktifkan"
+            setTextColor(if (isAccessibilityEnabled()) 0xFF4CAF50.toInt() else 0xFFF44336.toInt())
+        }
+    }
+
     private fun isAccessibilityEnabled(): Boolean {
         val am = getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
         val enabledServices = am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
@@ -151,9 +168,46 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+    private fun hasAllPermissions(): Boolean {
+        val overlayOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Settings.canDrawOverlays(this)
+        } else true
+        
+        val audioOk = ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        
+        val notifOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        } else true
+        
+        return overlayOk && audioOk && notifOk
+    }
+
+    private fun requestMissingPermissions() {
+        val permissionsToRequest = mutableListOf<String>()
+        
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(android.Manifest.permission.RECORD_AUDIO)
+        }
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+        
+        if (permissionsToRequest.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, permissionsToRequest.toTypedArray(), 100)
+        }
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+            Toast.makeText(this, "Izinkan 'Tampil di atas aplikasi lain' dulu", Toast.LENGTH_LONG).show()
+            startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+        }
+    }
+
     override fun onResume() {
         super.onResume()
-        // Refresh status accessibility saat kembali dari settings
-        recreate()
+        // Hanya refresh status, TIDAK recreate() agar tidak infinite loop
+        updateAccessStatus()
     }
 }
