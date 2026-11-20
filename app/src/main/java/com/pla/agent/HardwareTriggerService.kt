@@ -58,7 +58,7 @@ class HardwareTriggerService : Service() {
             ).apply {
                 description = "Mendengarkan tombol volume untuk memanggil PLA Agent"
                 setShowBadge(false)
-            )
+            }
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
         }
