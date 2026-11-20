@@ -5,19 +5,14 @@ import java.io.File
 
 class KnowledgeGraph(private val context: Context) {
     
-    // Struktur graf sederhana: Node -> Map<Relasi, Set<NodeTujuan>>
     private val graph = HashMap<String, HashMap<String, MutableSet<String>>>()
-    private var isBuilt = false
+    var isBuilt = false // UBAH DARI PRIVATE KE PUBLIC
     
     companion object {
         private const val GRAPH_FILE = "knowledge_graph.txt"
-        private const val MAX_EDGES_PER_NODE = 50 // Batas aman RAM 4GB
+        private const val MAX_EDGES_PER_NODE = 50
     }
 
-    /**
-     * Membangun graf pengetahuan dari dataset.
-     * Menganalisis pola "A adalah B", "A bagian dari B", dll dari teks jawaban.
-     */
     fun buildFromMemories(memories: List<String>) {
         if (isBuilt && memories.isEmpty()) return
         
@@ -34,10 +29,6 @@ class KnowledgeGraph(private val context: Context) {
         isBuilt = true
     }
 
-    /**
-     * Ekstraksi relasi sederhana dari kalimat.
-     * Pola: "[Kata1] [kata penghubung] [Kata2]"
-     */
     private fun extractRelationships(sentence: String) {
         val words = sentence.split(Regex("\\s+")).filter { it.length > 2 }
         if (words.size < 3) return
@@ -64,23 +55,17 @@ class KnowledgeGraph(private val context: Context) {
         }
     }
 
-    /**
-     * Mencari jalur hubungan antara dua konsep.
-     * Contoh: query("jakarta", "indonesia") -> ["ibu_kota"]
-     */
     fun findRelation(from: String, to: String): List<String> {
         val relations = mutableListOf<String>()
         val lowerFrom = from.lowercase()
         val lowerTo = to.lowercase()
         
-        // Cari langsung
         graph[lowerFrom]?.forEach { (rel, targets) ->
             if (targets.any { it.lowercase() == lowerTo }) {
                 relations.add(rel)
             }
         }
         
-        // Cari terbalik (to -> from)
         graph[lowerTo]?.forEach { (rel, targets) ->
             if (targets.any { it.lowercase() == lowerFrom }) {
                 relations.add("$rel (terbalik)")
@@ -90,9 +75,6 @@ class KnowledgeGraph(private val context: Context) {
         return relations
     }
 
-    /**
-     * Mendapatkan semua node yang terhubung dengan suatu konsep.
-     */
     fun getConnectedNodes(concept: String): Map<String, Set<String>> {
         return graph[concept.lowercase()] ?: emptyMap()
     }
