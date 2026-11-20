@@ -1,161 +1,159 @@
 package com.pla.agent
 
-import android.app.AlertDialog
+import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
-import android.widget.ArrayAdapter
-import android.widget.EditText
+import android.provider.Settings
+import android.view.accessibility.AccessibilityManager
+import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.Switch
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
-import com.pla.agent.databinding.ActivitySettingsBinding
-import kotlinx.coroutines.launch
 
 class SettingsActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivitySettingsBinding
     private lateinit var preferences: AppPreferences
-    private lateinit var database: AppDatabase
-    private lateinit var dataImporter: DataImporter
-    private var currentVersions = mutableListOf<String>()
-    private var selectedTrainingVersion = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivitySettingsBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        
+        // Layout programmatic sederhana (tanpa XML baru)
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 48, 48, 48)
+        }
 
-        try {
-            val app = application as AppContainer
-            preferences = app.preferences
-            database = app.database
-            dataImporter = DataImporter(database)
+        val title = TextView(this).apply {
+            text = "Pengaturan PLA Agent"
+            textSize = 24f
+            setTextColor(0xFF4CAF50.toInt())
+            setPadding(0, 0, 0, 32)
+        }
+        layout.addView(title)
 
-            binding.switchInternet.isChecked = preferences.isInternetEnabled()
-            binding.switchTts.isChecked = preferences.isTtsEnabled()
+        // === BAGIAN LAMA: NAMA AI (PONDASI) ===
+        val aiNameLabel = TextView(this).apply {
+            text = "Nama AI:"
+            textSize = 16f
+        }
+        layout.addView(aiNameLabel)
 
-            muatVersi()
+        val aiNameInput = android.widget.EditText(this).apply {
+            setText(preferences.getAiName())
+            hint = "Masukkan nama AI"
+        }
+        layout.addView(aiNameInput)
 
-            binding.btnBuatVersiBaru.setOnClickListener {
-                tampilkanDialogBuatVersi()
-            }
-
-            binding.btnSyncKnowledge.setOnClickListener {
-                if (selectedTrainingVersion.isEmpty()) {
-                    Toast.makeText(this, "Pilih versi terlebih dahulu!", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-                val url = binding.edtGithubRawUrl.text.toString().trim()
-                if (url.isEmpty() || !url.endsWith(".json")) {
-                    Toast.makeText(this, "Masukkan link Raw GitHub berakhiran .json", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-
-                binding.btnSyncKnowledge.isEnabled = false
-                binding.tvSyncStatus.text = "Menarik data untuk $selectedTrainingVersion..."
-                
-                lifecycleScope.launch {
-                    dataImporter.importFromGitHub(url, selectedTrainingVersion) { status ->
-                        runOnUiThread { binding.tvSyncStatus.text = status }
-                    }
-                    binding.edtGithubRawUrl.setText("")
-                    binding.btnSyncKnowledge.isEnabled = true
-                    muatDaftarSumber()
+        val saveNameBtn = Button(this).apply {
+            text = "Simpan Nama AI"
+            setOnClickListener {
+                val newName = aiNameInput.text.toString().trim()
+                if (newName.isNotEmpty()) {
+                    preferences.setAiName(newName)
+                    Toast.makeText(this@SettingsActivity, "Nama disimpan!", Toast.LENGTH_SHORT).show()
                 }
             }
+        }
+        layout.addView(saveNameBtn)
 
-            binding.btnTopics.setOnClickListener {
-                startActivity(Intent(this, TopicsActivity::class.java))
-            }
+        // Separator
+        layout.addView(android.view.View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 2
+            ).apply { topMargin = 32; bottomMargin = 32 }
+            setBackgroundColor(0xFFCCCCCC.toInt())
+        })
 
-            binding.btnBackSettings.setOnClickListener {
-                finish()
-            }
+        // === BAGIAN BARU: KONTROL TOMBOL FISIK ===
+        val hardwareTitle = TextView(this).apply {
+            text = "🎤 Kontrol Suara Latar Belakang"
+            textSize = 18f
+            setTextColor(0xFF4CAF50.toInt())
+            setPadding(0, 0, 0, 16)
+        }
+        layout.addView(hardwareTitle)
 
-            binding.switchInternet.setOnCheckedChangeListener { _, isChecked ->
-                preferences.setInternetEnabled(isChecked)
+        val hardwareDesc = TextView(this).apply {
+            text = "Ketuk Volume Up 2x cepat untuk memanggil mikrofon PLA Agent dari aplikasi manapun. Hasil suara akan diketik otomatis ke kolom teks aktif."
+            textSize = 14f
+            setPadding(0, 0, 0, 16)
+        }
+        layout.addView(hardwareDesc)
+
+        val hardwareSwitch = Switch(this).apply {
+            text = "Aktifkan Pemicu Tombol Volume"
+            isChecked = preferences.isHardwareTriggerEnabled()
+            setOnCheckedChangeListener { _, isChecked ->
+                preferences.setHardwareTriggerEnabled(isChecked)
                 if (isChecked) {
-                    LearningScheduler.startLearning(this)
+                    HardwareTriggerService.start(this@SettingsActivity)
+                    Toast.makeText(this@SettingsActivity, "Fitur aktif! Ketuk Volume Up 2x.", Toast.LENGTH_LONG).show()
                 } else {
-                    LearningScheduler.stopLearning(this)
+                    HardwareTriggerService.stop(this@SettingsActivity)
+                    Toast.makeText(this@SettingsActivity, "Fitur dimatikan.", Toast.LENGTH_SHORT).show()
                 }
             }
+        }
+        layout.addView(hardwareSwitch)
 
-            binding.switchTts.setOnCheckedChangeListener { _, isChecked ->
-                preferences.setTtsEnabled(isChecked)
+        // Status Accessibility
+        val accessStatus = TextView(this).apply {
+            text = if (isAccessibilityEnabled()) 
+                "✅ AutoTyper AKTIF - Siap mengetik otomatis" 
+            else 
+                "❌ AutoTyper BELUM AKTIF - Klik tombol di bawah untuk mengaktifkan"
+            textSize = 14f
+            setPadding(0, 16, 0, 8)
+            setTextColor(if (isAccessibilityEnabled()) 0xFF4CAF50.toInt() else 0xFFF44336.toInt())
+        }
+        layout.addView(accessStatus)
+
+        val enableAccessBtn = Button(this).apply {
+            text = "Buka Pengaturan Accessibility"
+            setOnClickListener {
+                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                Toast.makeText(this@SettingsActivity, 
+                    "Cari 'PLA Agent AutoTyper' lalu aktifkan", 
+                    Toast.LENGTH_LONG).show()
             }
+        }
+        layout.addView(enableAccessBtn)
 
-        } catch (e: Exception) {
-            Toast.makeText(this, "Terjadi kesalahan sistem: ${e.message}", Toast.LENGTH_LONG).show()
-            finish()
+        // Tombol Overlay Permission
+        val overlayBtn = Button(this).apply {
+            text = "Izinkan Tampil di Atas Aplikasi Lain"
+            setOnClickListener {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val intent = Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:$packageName")
+                    )
+                    startActivity(intent)
+                }
+            }
+        }
+        layout.addView(overlayBtn)
+
+        setContentView(layout)
+    }
+
+    private fun isAccessibilityEnabled(): Boolean {
+        val am = getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
+        val enabledServices = am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+        return enabledServices.any { 
+            it.resolveInfo.serviceInfo.packageName == packageName &&
+            it.resolveInfo.serviceInfo.name.contains("AutoTyper")
         }
     }
 
-    private fun muatVersi() {
-        lifecycleScope.launch {
-            var versions = database.appDao().getAllVersions()
-            
-            if (versions.isEmpty()) {
-                database.appDao().insertVersion(VersionEntity(versionName = "V1. pla", isActiveForChat = true))
-                versions = database.appDao().getAllVersions()
-            }
-
-            currentVersions.clear()
-            for (v in versions) {
-                currentVersions.add(v.versionName)
-            }
-
-            val adapter = ArrayAdapter(this@SettingsActivity, android.R.layout.simple_spinner_dropdown_item, currentVersions)
-            binding.spinnerVersion.adapter = adapter
-
-            if (currentVersions.isNotEmpty()) {
-                selectedTrainingVersion = currentVersions[0]
-                muatDaftarSumber()
-            }
-
-            binding.spinnerVersion.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
-                    selectedTrainingVersion = currentVersions[position]
-                    muatDaftarSumber()
-                }
-                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
-            }
-        }
-    }
-
-    private fun tampilkanDialogBuatVersi() {
-        val input = EditText(this)
-        input.hint = "Nama Versi (Misal: V2. pla)"
-        input.setText("V${currentVersions.size + 1}. pla")
-
-        AlertDialog.Builder(this)
-            .setTitle("Buat Versi Model Baru")
-            .setView(input)
-            .setPositiveButton("Buat") { _, _ ->
-                val nama = input.text.toString().trim()
-                if (nama.isNotEmpty()) {
-                    lifecycleScope.launch {
-                        database.appDao().insertVersion(VersionEntity(versionName = nama))
-                        Toast.makeText(this@SettingsActivity, "Versi $nama berhasil dibuat!", Toast.LENGTH_SHORT).show()
-                        muatVersi()
-                    }
-                }
-            }
-            .setNegativeButton("Batal", null)
-            .show()
-    }
-
-    private fun muatDaftarSumber() {
-        if (selectedTrainingVersion.isEmpty()) return
-        lifecycleScope.launch {
-            val sources = database.appDao().getSourcesByVersion(selectedTrainingVersion)
-            val displaySources = if (sources.isEmpty()) {
-                listOf("Belum ada link data untuk versi ini.")
-            } else {
-                sources
-            }
-            val adapter = ArrayAdapter(this@SettingsActivity, android.R.layout.simple_list_item_1, displaySources)
-            binding.listSources.adapter = adapter
-        }
+    override fun onResume() {
+        super.onResume()
+        // Refresh status accessibility saat kembali dari settings
+        recreate()
     }
 }
