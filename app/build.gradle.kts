@@ -1,6 +1,8 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    // WAJIB: Tambahkan plugin kapt agar Room compiler bisa jalan
+    id("kotlin-kapt") 
 }
 
 android {
@@ -21,13 +23,16 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
+    
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    
     kotlinOptions {
         jvmTarget = "17"
     }
+    
     buildFeatures {
         viewBinding = true
     }
@@ -52,6 +57,6 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     
-    // BARU: MediaSessionCompat untuk Hardware Trigger
+    // MediaSessionCompat untuk Hardware Trigger
     implementation("androidx.media:media:1.7.0")
 }
