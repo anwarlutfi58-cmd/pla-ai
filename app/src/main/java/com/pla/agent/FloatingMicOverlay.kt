@@ -5,11 +5,11 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
+import android.os.Bundle
 import android.os.IBinder
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.view.Gravity
-import android.view.LayoutInflater
 import android.view.WindowManager
 import android.widget.ImageButton
 import android.widget.Toast
@@ -73,7 +73,6 @@ class FloatingMicOverlay : Service() {
         params.x = 0
         params.y = 0
 
-        // Buat view sederhana secara programmatic (tanpa XML baru)
         val button = ImageButton(this).apply {
             setImageResource(android.R.drawable.ic_btn_speak_now)
             setBackgroundColor(0xFF4CAF50.toInt())
@@ -83,8 +82,6 @@ class FloatingMicOverlay : Service() {
         
         overlayView = button
         windowManager?.addView(button, params)
-        
-        // Langsung mulai mendengarkan saat overlay muncul
         startListening()
     }
 
@@ -96,16 +93,12 @@ class FloatingMicOverlay : Service() {
     }
 
     private fun toggleListening() {
-        if (isListening) {
-            stopListening()
-        } else {
-            startListening()
-        }
+        if (isListening) stopListening() else startListening()
     }
 
     private fun startListening() {
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            Toast.makeText(this, "STT tidak tersedia di HP ini", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "STT tidak tersedia", Toast.LENGTH_SHORT).show()
             return
         }
         
@@ -126,11 +119,9 @@ class FloatingMicOverlay : Service() {
                 if (!matches.isNullOrEmpty()) {
                     val text = matches[0]
                     val typed = AutoTyperAccessibility.typeText(text)
-                    if (typed) {
-                        Toast.makeText(this@FloatingMicOverlay, "Teks diketik!", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(this@FloatingMicOverlay, "Gagal ketik. Aktifkan Accessibility dulu.", Toast.LENGTH_LONG).show()
-                    }
+                    Toast.makeText(this@FloatingMicOverlay, 
+                        if (typed) "Teks diketik!" else "Gagal ketik. Cek Accessibility.", 
+                        Toast.LENGTH_SHORT).show()
                 }
                 hideOverlay()
             }
