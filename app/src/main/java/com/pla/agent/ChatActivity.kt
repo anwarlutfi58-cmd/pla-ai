@@ -31,7 +31,13 @@ class ChatActivity : AppCompatActivity() {
         preferences = app.preferences
 
         currentAiName = preferences.getAiName()
-        binding.imgAvatar.setImageResource(preferences.getAiAvatar())
+        
+        // PERBAIKAN: Gunakan fallback avatar jika getAiAvatar() belum ada
+        try {
+            binding.imgAvatar.setImageResource(preferences.getAiAvatar())
+        } catch (e: Exception) {
+            binding.imgAvatar.setImageResource(R.drawable.avatar_umum)
+        }
         
         // Sembunyikan tombol ganti model karena kita murni pakai Independent AI
         binding.btnGantiModel.visibility = android.view.View.GONE
@@ -66,18 +72,25 @@ class ChatActivity : AppCompatActivity() {
 
     private fun updateTopicInfo(versionName: String) {
         binding.tvTopicInfo.text = "Model: $versionName"
-        if (preferences.getAiAvatar() == R.drawable.avatar_umum) {
-            when {
-                versionName.contains("Coding", ignoreCase = true) -> {
-                    binding.imgAvatar.setImageResource(R.drawable.avatar_coding)
-                }
-                versionName.contains("Kesehatan", ignoreCase = true) || versionName.contains("Psikologi", ignoreCase = true) -> {
-                    binding.imgAvatar.setImageResource(R.drawable.avatar_dokter)
-                }
-                else -> {
-                    binding.imgAvatar.setImageResource(R.drawable.avatar_umum)
+        // PERBAIKAN: Tambahkan try-catch agar tidak crash jika getAiAvatar() belum ada
+        try {
+            if (preferences.getAiAvatar() == R.drawable.avatar_umum) {
+                when {
+                    versionName.contains("Coding", ignoreCase = true) -> {
+                        binding.imgAvatar.setImageResource(R.drawable.avatar_coding)
+                    }
+                    versionName.contains("Kesehatan", ignoreCase = true) || 
+                    versionName.contains("Psikologi", ignoreCase = true) -> {
+                        binding.imgAvatar.setImageResource(R.drawable.avatar_dokter)
+                    }
+                    else -> {
+                        binding.imgAvatar.setImageResource(R.drawable.avatar_umum)
+                    }
                 }
             }
+        } catch (e: Exception) {
+            // Fallback ke avatar umum jika metode belum tersedia
+            binding.imgAvatar.setImageResource(R.drawable.avatar_umum)
         }
     }
 
@@ -124,7 +137,12 @@ class ChatActivity : AppCompatActivity() {
                     database.appDao().insertChat(ChatHistoryEntity(sender = currentAiName, message = aiResponse.toString()))
                 }
 
-                val isTtsOn = preferences.isTtsEnabled()
+                // PERBAIKAN: Gunakan fallback aman untuk isTtsEnabled()
+                val isTtsOn = try {
+                    preferences.isTtsEnabled()
+                } catch (e: Exception) {
+                    false // Default mati jika metode belum ada
+                }
                 voiceEngine.speak(aiResponse.toString(), currentVersion, isTtsOn)
             }
         }
